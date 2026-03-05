@@ -49,7 +49,7 @@ export class UsersService {
     const token = this.jwtService.signAsync(
       {
         email: user.email,
-        id: user.id,
+        id: user.id.toString(),
       },
       { expiresIn: '1h' },
     );

@@ -10,7 +10,7 @@ import { CreateUserDto } from './DTO/CreateUserDto';
 import { UsersService } from './users.service';
 import { SignInDto } from './DTO/SignInDto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ApiBearerAuth, ApiHeaders, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 
 @Controller('users')
 export class UsersController {

@@ -13,7 +13,6 @@ import { LoggerMiddleware } from './common/logger.middleware';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
