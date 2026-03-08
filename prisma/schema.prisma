@@ -12,10 +12,50 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
 model User{
-  id        String      @id @default(uuid())
+  userId        String      @id @default(uuid())
+  fullName      String?
   email     String   @unique
   password  String
-  name      String?
+  phone String?
+  gender Gender?
+  role Role
+  patient Patient?
+  specialist Specialist?
+  admin Admin?
   createdAt DateTime @default(now())
+}
+
+model Patient {
+  userId        String      @id
+  age Int?
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model Specialist {
+  userId        String      @id
+  speciality String?
+  bio String?
+  licenseNumber String
+  isValidated Boolean @default(false)
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model Admin {
+  userId        String      @id
+  canModerate Boolean @default(false)
+  user User @relation(fields: [userId], references: [userId])
 }

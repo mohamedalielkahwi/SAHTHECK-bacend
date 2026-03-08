@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsNumberString, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import { Gender, Role } from 'generated/prisma/enums';
 export class CreateUserDto {
   @ApiProperty({
     description: 'The name of the user',
@@ -7,7 +8,7 @@ export class CreateUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  fullName: string;
 
   @ApiProperty({
     description: 'The email of the user',
@@ -25,4 +26,40 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(6)
   password: string;
+
+  @ApiProperty({
+    description: 'The phone number of the user',
+    example: '12345678',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^[0-9 ]{8}$/, { message: 'phone number must be exactly 8 digits' })
+  phone:string;
+  
+  @ApiProperty({
+    description: 'The gender of the user',
+    example: 'MALE',
+  })
+  @IsString()
+  @IsEnum(Gender, { message: 'gender must be either MALE,FEMALE or OTHER' })
+  @IsNotEmpty()
+  gender: Gender;
+
+  @ApiProperty({
+    description: 'The role of the user',
+    example: 'ADMIN',
+  })
+  @IsString()
+  @IsEnum(Role, { message: 'role must be either ADMIN,PATIENT or DOCTOR' })
+  @IsNotEmpty()
+  role: Role;
+  
+  @ApiProperty({
+    description: 'The age of the Patient',
+    example: 30,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNumberString()
+  age?: string;
 }

@@ -6,30 +6,49 @@ import { SignInResponse } from './response/SignInResponse';
 @Injectable()
 export class UsersService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
   ) {}
   async createUser(createUserDto) {
-    const { email, password, name } = createUserDto;
+    const { fullName, email, password, phone, gender, role, age } =
+      createUserDto;
     const user = await this.prisma.user.findUnique({
       where: {
         email,
       },
     });
-    console.log(email, password, name);
+    console.log(email, password, fullName);
     if (user) throw new ConflictException('User already exists');
     const hashedPassword = await this.hashPassword(password);
-    return await this.prisma.user.create({
+    return this.prisma.user.create({
       data: {
+        fullName,
         email,
         password: hashedPassword,
-        name,
+        phone,
+        gender,
+        role,
+        patient:
+          role === 'PATIENT'
+            ? {
+                create: {
+                  age: Number.parseInt(age),
+                },
+              }
+            : undefined,
       },
       select: {
-        id: true,
+        userId: true,
+        fullName: true,
         email: true,
-        name: true,
-        createdAt: true,
+        phone: true,
+        gender: true,
+        role: true,
+        patient: {
+          select: {
+            age: true,
+          },
+        },
       },
     });
   }
@@ -49,12 +68,53 @@ export class UsersService {
     const token = this.jwtService.signAsync(
       {
         email: user.email,
-        id: user.id.toString(),
+        id: user.userId.toString(),
       },
       { expiresIn: '1h' },
     );
     const response = new SignInResponse();
     response.accessToken = (await token).toString();
     return response;
+  }
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        userId,
+      },
+    });
+    if (!user) throw new ConflictException('User not found');
+    await this.prisma.patient.delete({
+      where: {
+        userId,
+      },
+    });
+    await this.prisma.user.delete({
+      where: {
+        userId,
+      },
+    });
+    return { message: 'User deleted successfully' };
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        userId,
+      },
+      select: {
+        userId: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        role: true,
+        patient: {
+          select: {
+            age: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new ConflictException('User not found');
+    return user;
   }
 }
