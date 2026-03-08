@@ -153,6 +153,19 @@ export class UsersService {
             age: true,
           },
         },
+        specialist: {
+          select: {
+            speciality: true,
+            bio: true,
+            licenseNumber: true,
+            isValidated: true,
+          },
+        },
+        admin: {
+          select: {
+            canModerate: true,
+          },
+        },
       },
     });
     if (!user) throw new ConflictException('User not found');

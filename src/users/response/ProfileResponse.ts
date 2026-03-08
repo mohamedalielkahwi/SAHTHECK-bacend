@@ -40,4 +40,30 @@ export class ProfileResponse {
     patient: {
         age: number;
     };
+
+    @ApiProperty({
+        description: 'The specialist details',
+        example: {
+            speciality: 'Cardiology',
+            bio: 'Specialist in heart diseases',
+            licenseNumber: '1234567890',
+            isValidated: true,
+        },
+    })
+    specialist: {
+        speciality: string;
+        bio: string;
+        licenseNumber: string;
+        isValidated: boolean;
+    };
+
+    @ApiProperty({
+        description: 'The admin details',
+        example: {
+            canModerate: true,
+        },
+    })
+    admin: {
+        canModerate: boolean;
+    };
 }
