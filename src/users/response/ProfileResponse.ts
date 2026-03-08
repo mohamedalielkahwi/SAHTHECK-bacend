@@ -27,7 +27,7 @@ export class ProfileResponse {
 
     @ApiProperty({
         description: 'The role of the user',
-        example: 'user',
+        example: 'PATIENT',
     })
     role: string;
     

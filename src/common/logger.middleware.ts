@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 export class LoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const now = Date.now();
-    const { method, url, body } = req;
+    const { method, url } = req;
 
     console.log(`[${new Date().toISOString()}] → ${method} ${url}`);
 

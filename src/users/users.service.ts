@@ -1,23 +1,36 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { SignInResponse } from './response/SignInResponse';
+import refreshJwtConfig from './config/refresh-jwt.config';
+import { ConfigType } from '@nestjs/config';
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    @Inject(refreshJwtConfig.KEY)
+    private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {}
   async createUser(createUserDto) {
-    const { fullName, email, password, phone, gender, role, age } =
+    const { fullName, email, password, phone, gender, role, age,speciality,bio,licenseNumber,isValidated ,canModerate} =
       createUserDto;
+
+      if (role === 'DOCTOR' && (!speciality || !bio || !licenseNumber)) {
+        throw new ConflictException('Speciality, bio and license number are required for doctors');
+      }
+      if (role === 'PATIENT' && !age) {
+        throw new ConflictException('Age is required for patients');
+      }
+      if(role === 'ADMIN' && !canModerate){
+        throw new ConflictException('canModerate is required for admins');
+      }
     const user = await this.prisma.user.findUnique({
       where: {
         email,
       },
     });
-    console.log(email, password, fullName);
     if (user) throw new ConflictException('User already exists');
     const hashedPassword = await this.hashPassword(password);
     return this.prisma.user.create({
@@ -36,6 +49,23 @@ export class UsersService {
                 },
               }
             : undefined,
+        specialist:
+          role === 'DOCTOR'
+            ? {
+              create:{
+                speciality,
+                bio,
+                licenseNumber,
+                isValidated
+              }
+            } : undefined,
+        admin:
+          role === 'ADMIN'
+            ? {
+              create:{
+                canModerate
+              }
+            } : undefined,
       },
       select: {
         userId: true,
@@ -49,6 +79,19 @@ export class UsersService {
             age: true,
           },
         },
+        specialist: {
+          select: {
+            speciality: true,
+            bio: true,
+            licenseNumber: true,
+            isValidated: true,
+          },
+        },
+        admin:{
+          select:{
+            canModerate:true,
+          }
+        }
       },
     });
   }
@@ -65,16 +108,14 @@ export class UsersService {
     if (!user) throw new ConflictException('Invalid credentials');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
-    const token = this.jwtService.signAsync(
-      {
-        email: user.email,
-        id: user.userId.toString(),
-      },
-      { expiresIn: '1h' },
-    );
-    const response = new SignInResponse();
-    response.accessToken = (await token).toString();
-    return response;
+    const payload = { email: user.email, id: user.userId.toString() };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, this.refreshTokenConfig),
+    ]);
+
+    return { accessToken, refreshToken };
   }
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -116,5 +157,21 @@ export class UsersService {
     });
     if (!user) throw new ConflictException('User not found');
     return user;
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(
+        refreshToken,
+        this.refreshTokenConfig,
+      );
+      const newAcessToken = await this.jwtService.signAsync({
+        email: payload.email,
+        id: payload.id,
+      });
+      return { accessToken: newAcessToken };
+    } catch (error) {
+      throw new ConflictException('Invalid refresh token');
+    }
   }
 }

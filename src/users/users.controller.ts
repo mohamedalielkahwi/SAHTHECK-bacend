@@ -52,4 +52,14 @@ export class UsersController {
   async getProfile(@Request() req) {
     return this.usersService.getProfile(req.user.id);
   }
+
+  @ApiResponse({
+    status: 200,
+    description: 'The access token has been successfully refreshed.',
+    type: SignInResponse,
+  })
+  @Post('/refresh-token')
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    return this.usersService.refreshToken(body.refreshToken);
+  }
 }
