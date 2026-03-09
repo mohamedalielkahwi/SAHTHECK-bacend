@@ -33,6 +33,7 @@ model User{
   phone String?
   gender Gender?
   role Role
+  address String?
   patient Patient?
   specialist Specialist?
   admin Admin?

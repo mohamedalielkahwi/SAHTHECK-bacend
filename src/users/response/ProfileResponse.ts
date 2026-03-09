@@ -26,6 +26,12 @@ export class ProfileResponse {
     phone: string;
 
     @ApiProperty({
+        description: 'The address of the user',
+        example: '123 Main Street, City, Country',
+    })
+    address: string;
+
+    @ApiProperty({
         description: 'The role of the user',
         example: 'PATIENT',
     })

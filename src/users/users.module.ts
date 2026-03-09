@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import jwtConfig from './config/jwt.config';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { JwtModule } from '@nestjs/jwt';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -13,6 +14,6 @@ import { JwtModule } from '@nestjs/jwt';
     ConfigModule.forFeature(refreshJwtConfig)
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService,GoogleStrategy],
 })
 export class UsersModule {}

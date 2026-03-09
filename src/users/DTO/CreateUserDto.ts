@@ -31,6 +31,7 @@ export class CreateUserDto {
     description: 'The password of the user',
     example: 'password123',
   })
+  @IsOptional()
   @IsNotEmpty()
   @IsString()
   @MinLength(6)
@@ -53,6 +54,14 @@ export class CreateUserDto {
   @IsString()
   @IsEnum(Gender, { message: 'gender must be either MALE,FEMALE or OTHER' })
   gender: Gender;
+
+  @ApiProperty({
+    description: 'The address of the user',
+    example: '123 Main Street, City, Country',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
 
   @ApiProperty({
     description: 'The role of the user',

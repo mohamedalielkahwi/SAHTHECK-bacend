@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { SignInResponse } from './response/SignInResponse';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
+import { UpdateUserDto } from './DTO/UpdateUserDto';
+import { CreateUserDto } from './DTO/CreateUserDto';
 @Injectable()
 export class UsersService {
   constructor(
@@ -13,21 +15,26 @@ export class UsersService {
     @Inject(refreshJwtConfig.KEY)
     private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {}
-  async createUser(createUserDto) {
+  async createUser(createUserDto: CreateUserDto) {
     const {
       fullName,
       email,
       password,
       phone,
       gender,
+      address,
       role,
       age,
       speciality,
       bio,
       licenseNumber,
-      isValidated,
     } = createUserDto;
-
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (user) throw new ConflictException('User already exists');
     if (role === 'DOCTOR' && (!speciality || !bio || !licenseNumber)) {
       throw new ConflictException(
         'Speciality, bio and license number are required for doctors',
@@ -36,12 +43,6 @@ export class UsersService {
     if (role === 'PATIENT' && !age) {
       throw new ConflictException('Age is required for patients');
     }
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
-    if (user) throw new ConflictException('User already exists');
     const hashedPassword = await this.hashPassword(password);
     return this.prisma.user.create({
       data: {
@@ -49,13 +50,14 @@ export class UsersService {
         email,
         password: hashedPassword,
         phone,
+        address,
         gender,
         role,
         patient:
           role === 'PATIENT'
             ? {
                 create: {
-                  age: Number.parseInt(age),
+                  age: age ? Number.parseInt(age) : undefined,
                 },
               }
             : undefined,
@@ -66,7 +68,6 @@ export class UsersService {
                   speciality,
                   bio,
                   licenseNumber,
-                  isValidated,
                 },
               }
             : undefined,
@@ -85,6 +86,7 @@ export class UsersService {
         email: true,
         phone: true,
         gender: true,
+        address: true,
         role: true,
         patient: {
           select: {
@@ -171,6 +173,7 @@ export class UsersService {
         fullName: true,
         email: true,
         phone: true,
+        address: true,
         role: true,
         patient: {
           select: {
@@ -264,5 +267,80 @@ export class UsersService {
       },
     });
     return { message: 'Admin validated successfully' };
+  }
+  async updateUser(userId: string, role: string, updateUserDto: UpdateUserDto) {
+    const { fullName, email, phone, address, age, bio } = updateUserDto;
+    try {
+      const updateUser = await this.prisma.user.update({
+        where: {
+          userId,
+        },
+        data: {
+          fullName,
+          email,
+          phone,
+          address,
+          specialist:
+            role === 'DOCTOR'
+              ? {
+                  update: {
+                    bio,
+                  },
+                }
+              : undefined,
+          patient:
+            role === 'PATIENT'
+              ? {
+                  update: {
+                    age: age ? Number.parseInt(age) : undefined,
+                  },
+                }
+              : undefined,
+        },
+        select: {
+          userId: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          address: true,
+          role: true,
+          patient: {
+            select: {
+              age: true,
+            },
+          },
+          specialist: {
+            select: {
+              speciality: true,
+              bio: true,
+              licenseNumber: true,
+              isValidated: true,
+            },
+          },
+          admin: {
+            select: {
+              canModerate: true,
+            },
+          },
+        },
+      });
+      const payload = {
+        email: updateUser.email,
+        userId: updateUser.userId.toString(),
+        role: updateUser.role,
+      };
+      const newToken = await this.jwtService.signAsync(payload);
+      const newRefreshToken = await this.jwtService.signAsync(
+        payload,
+        this.refreshTokenConfig,
+      );
+      return {
+        ...updateUser,
+        accessToken: newToken,
+        refreshToken: newRefreshToken,
+      };
+    } catch (error) {
+      throw new ConflictException('User not found');
+    }
   }
 }
