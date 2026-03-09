@@ -14,18 +14,28 @@ export class UsersService {
     private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {}
   async createUser(createUserDto) {
-    const { fullName, email, password, phone, gender, role, age,speciality,bio,licenseNumber,isValidated ,canModerate} =
-      createUserDto;
+    const {
+      fullName,
+      email,
+      password,
+      phone,
+      gender,
+      role,
+      age,
+      speciality,
+      bio,
+      licenseNumber,
+      isValidated,
+    } = createUserDto;
 
-      if (role === 'DOCTOR' && (!speciality || !bio || !licenseNumber)) {
-        throw new ConflictException('Speciality, bio and license number are required for doctors');
-      }
-      if (role === 'PATIENT' && !age) {
-        throw new ConflictException('Age is required for patients');
-      }
-      if(role === 'ADMIN' && !canModerate){
-        throw new ConflictException('canModerate is required for admins');
-      }
+    if (role === 'DOCTOR' && (!speciality || !bio || !licenseNumber)) {
+      throw new ConflictException(
+        'Speciality, bio and license number are required for doctors',
+      );
+    }
+    if (role === 'PATIENT' && !age) {
+      throw new ConflictException('Age is required for patients');
+    }
     const user = await this.prisma.user.findUnique({
       where: {
         email,
@@ -52,20 +62,22 @@ export class UsersService {
         specialist:
           role === 'DOCTOR'
             ? {
-              create:{
-                speciality,
-                bio,
-                licenseNumber,
-                isValidated
+                create: {
+                  speciality,
+                  bio,
+                  licenseNumber,
+                  isValidated,
+                },
               }
-            } : undefined,
+            : undefined,
         admin:
           role === 'ADMIN'
             ? {
-              create:{
-                canModerate
+                create: {
+                  canModerate: false,
+                },
               }
-            } : undefined,
+            : undefined,
       },
       select: {
         userId: true,
@@ -87,11 +99,11 @@ export class UsersService {
             isValidated: true,
           },
         },
-        admin:{
-          select:{
-            canModerate:true,
-          }
-        }
+        admin: {
+          select: {
+            canModerate: true,
+          },
+        },
       },
     });
   }
@@ -108,7 +120,11 @@ export class UsersService {
     if (!user) throw new ConflictException('Invalid credentials');
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
-    const payload = { email: user.email, id: user.userId.toString() };
+    const payload = {
+      email: user.email,
+      userId: user.userId.toString(),
+      role: user.role,
+    };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
@@ -117,18 +133,26 @@ export class UsersService {
 
     return { accessToken, refreshToken };
   }
-  async deleteUser(userId: string) {
+  async deleteUser(userId: string, id: string) {
+    const userRole = await this.prisma.user.findUnique({
+      where: {
+        userId: id,
+        admin: {
+          canModerate: true,
+        },
+      },
+      select: {
+        role: true,
+      },
+    });
+    if (!userRole)
+      throw new ConflictException('Only approved admins can delete users');
     const user = await this.prisma.user.findUnique({
       where: {
         userId,
       },
     });
     if (!user) throw new ConflictException('User not found');
-    await this.prisma.patient.delete({
-      where: {
-        userId,
-      },
-    });
     await this.prisma.user.delete({
       where: {
         userId,
@@ -186,5 +210,59 @@ export class UsersService {
     } catch (error) {
       throw new ConflictException('Invalid refresh token');
     }
+  }
+  async validateDoctor(userId: string, id: string) {
+    const admin = await this.prisma.admin.findUnique({
+      where: {
+        userId: id,
+        canModerate: true,
+      },
+    });
+    if (!admin)
+      throw new ConflictException('Only approved admins can validate doctors');
+    const doctor = await this.prisma.specialist.findUnique({
+      where: {
+        userId,
+        isValidated: false,
+      },
+    });
+    if (!doctor)
+      throw new ConflictException('Doctor not found or is validated');
+    await this.prisma.specialist.update({
+      where: {
+        userId,
+      },
+      data: {
+        isValidated: true,
+      },
+    });
+    return { message: 'Doctor validated successfully' };
+  }
+  async validateAdmin(userId: string, id: string) {
+    const admin = await this.prisma.admin.findUnique({
+      where: {
+        userId: id,
+        canModerate: true,
+      },
+    });
+    if (!admin)
+      throw new ConflictException('Only approved admins can validate admins');
+    const adminUser = await this.prisma.admin.findUnique({
+      where: {
+        userId,
+        canModerate: false,
+      },
+    });
+    if (!adminUser)
+      throw new ConflictException('Admin not found or is validated');
+    await this.prisma.admin.update({
+      where: {
+        userId,
+      },
+      data: {
+        canModerate: true,
+      },
+    });
+    return { message: 'Admin validated successfully' };
   }
 }

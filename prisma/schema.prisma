@@ -42,7 +42,7 @@ model User{
 model Patient {
   userId        String      @id
   age Int?
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
 }
 
 model Specialist {
@@ -51,11 +51,11 @@ model Specialist {
   bio String?
   licenseNumber String
   isValidated Boolean @default(false)
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
 }
 
 model Admin {
   userId        String      @id
   canModerate Boolean @default(false)
-  user User @relation(fields: [userId], references: [userId])
+  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
 }

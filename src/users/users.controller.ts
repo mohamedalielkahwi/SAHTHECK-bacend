@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -14,6 +15,7 @@ import { AuthGuard } from 'src/auth/auth.guard';
 import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { ProfileResponse } from './response/ProfileResponse';
 import { SignInResponse } from './response/SignInResponse';
+import { RefreshTokenDto } from './DTO/RefreshTokenDto';
 
 @Controller('users')
 export class UsersController {
@@ -32,14 +34,14 @@ export class UsersController {
     return this.usersService.signIn(signInDto);
   }
   
+  @UseGuards(AuthGuard)
   @Delete('/delete/:id')
   @ApiResponse({
     status: 200,
     description: 'The user has been successfully deleted.',
   })
   async deleteUser(@Request() req) {
-    const userId = req.params.id;
-    return this.usersService.deleteUser(userId);
+    return this.usersService.deleteUser( req.params.id , req.user.userId);
   }
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
@@ -50,7 +52,7 @@ export class UsersController {
   })
   @Get('/profile')
   async getProfile(@Request() req) {
-    return this.usersService.getProfile(req.user.id);
+    return this.usersService.getProfile(req.user.userId);
   }
 
   @ApiResponse({
@@ -59,7 +61,28 @@ export class UsersController {
     type: SignInResponse,
   })
   @Post('/refresh-token')
-  async refreshToken(@Body() body: { refreshToken: string }) {
-    return this.usersService.refreshToken(body.refreshToken);
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.usersService.refreshToken(refreshTokenDto.refreshToken);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Patch("/validate-doctor/:id")
+  async validateDoctor(@Request() req) {
+    return this.usersService.validateDoctor(req.params.id, req.user.userId);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Patch("/validate-admin/:id")
+  async validateAdmin(@Request() req) {
+    return this.usersService.validateAdmin(req.params.id, req.user.userId);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Get("/whoami")
+  async whoAmI(@Request() req) {
+    return { userId: req.user.userId, email: req.user.email, role: req.user.role };
   }
 }

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsBoolean,
   IsEmail,
   IsEnum,
   IsNotEmpty,
@@ -103,11 +102,4 @@ export class CreateUserDto {
   })
   licenseNumber: string;
 
-  @ApiProperty({
-    description: 'The status of the admin to moderate the Doctors',
-    example: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  canModerate?: boolean;
 }
