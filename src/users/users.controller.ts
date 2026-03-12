@@ -19,6 +19,7 @@ import { RefreshTokenDto } from './DTO/RefreshTokenDto';
 import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { UpdateUserResponse } from './response/UpadteUserResponse';
 import { GoogleAuthGuard } from 'src/auth/google-auth.guard';
+import { GoogleSignupResponse } from './response/GoogleSignupResponse';
 
 @Controller('users')
 export class UsersController {
@@ -27,6 +28,7 @@ export class UsersController {
   async createUser(@Body() createUserDto: CreateUserDto) {
     return this.usersService.createUser(createUserDto);
   }
+
   @Post('/signin')
   @ApiResponse({
     status: 201,
@@ -108,13 +110,18 @@ export class UsersController {
       updateUserDto,
     );
   }
-  // @Get('/auth/google')
-  // @UseGuards(GoogleAuthGuard)
-  // async googleAuth() {}
+  @Get('/auth/google')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth() {}
 
-  // @Get('/auth/google/callback')
-  // @UseGuards(GoogleAuthGuard)
-  // async googleAuthCallback(@Request() req) {
-  //   return this.usersService.googlesignup(req.user);
-  // }
+  @Get('/auth/google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiResponse({
+    status: 200,
+    description: 'The user has been successfully authenticated with Google.',
+    type: GoogleSignupResponse,
+  })
+  async googleAuthCallback(@Request() req) {
+    return this.usersService.googlesignup(req.user);
+  }
 }

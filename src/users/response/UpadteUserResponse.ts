@@ -65,7 +65,7 @@ export class UpdateUserResponse {
 
   @ApiProperty({
     description: 'The information of the Admin',
-    example: { canModerate: true }, // object not just true
+    example: { canModerate: true },
     nullable: true,
   })
   admin: {

@@ -7,6 +7,11 @@ import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { CreateUserDto } from './DTO/CreateUserDto';
+interface GoogleProfile {
+  email: string;
+  fullName: string;
+  picture: string;
+}
 @Injectable()
 export class UsersService {
   constructor(
@@ -120,6 +125,11 @@ export class UsersService {
       },
     });
     if (!user) throw new ConflictException('Invalid credentials');
+
+    if (!user.password) {
+      throw new ConflictException('Please sign in with Google');
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
     const payload = {
@@ -329,18 +339,62 @@ export class UsersService {
         userId: updateUser.userId.toString(),
         role: updateUser.role,
       };
-      const newToken = await this.jwtService.signAsync(payload);
-      const newRefreshToken = await this.jwtService.signAsync(
-        payload,
-        this.refreshTokenConfig,
-      );
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload),
+        this.jwtService.signAsync(payload, this.refreshTokenConfig),
+      ]);
       return {
         ...updateUser,
-        accessToken: newToken,
-        refreshToken: newRefreshToken,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
       };
     } catch (error) {
       throw new ConflictException('User not found');
+    }
+  }
+  async googlesignup(googleUser: GoogleProfile) {
+    const { email, fullName } = googleUser;
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+    if (user) {
+      const payload = {
+        email: user.email,
+        userId: user.userId.toString(),
+        role: user.role,
+      };
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload),
+        this.jwtService.signAsync(payload, this.refreshTokenConfig),
+      ]);
+      return {
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      };
+    } else {
+      const newUser = await this.prisma.user.create({
+        data: {
+          email: email,
+          fullName: fullName,
+          role: 'PATIENT',
+        },
+      });
+      const payload = {
+        email: newUser.email,
+        userId: newUser.userId.toString(),
+        role: newUser.role,
+      };
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload),
+        this.jwtService.signAsync(payload, this.refreshTokenConfig),
+      ]);
+      return {
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        isNew: true,
+      };
     }
   }
 }
