@@ -7,6 +7,7 @@ import refreshJwtConfig from './config/refresh-jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { CreateUserDto } from './DTO/CreateUserDto';
+import { OtpService } from 'src/otp/otp.service';
 interface GoogleProfile {
   email: string;
   fullName: string;
@@ -15,6 +16,7 @@ interface GoogleProfile {
 @Injectable()
 export class UsersService {
   constructor(
+    private readonly otpService: OtpService,
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     @Inject(refreshJwtConfig.KEY)
@@ -117,7 +119,7 @@ export class UsersService {
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
   }
-  async signIn(signInDto): Promise<SignInResponse> {
+  async signIn(signInDto): Promise<{ require2FA: boolean ,userId: string}> {
     const { email, password } = signInDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -132,12 +134,17 @@ export class UsersService {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
-    const payload = {
-      email: user.email,
-      userId: user.userId.toString(),
-      role: user.role,
-    };
+    console.log('User authenticated, sending OTP for 2FA');
+    await this.otpService.sendOtp(user.userId, user.email, 'TWO_FACTOR');
+    return { require2FA: true ,userId: user.userId};
+  }
 
+  async verifySignIn(userId: string, code: string): Promise<SignInResponse> {
+    await this.otpService.verifyOtp(userId, code, 'TWO_FACTOR');
+
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+
+    const payload = { email: user!.email, userId: user!.userId, role: user!.role };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
       this.jwtService.signAsync(payload, this.refreshTokenConfig),
@@ -145,6 +152,7 @@ export class UsersService {
 
     return { accessToken, refreshToken };
   }
+
   async deleteUser(userId: string, id: string) {
     const userRole = await this.prisma.user.findUnique({
       where: {

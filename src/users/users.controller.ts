@@ -39,6 +39,16 @@ export class UsersController {
     return this.usersService.signIn(signInDto);
   }
 
+  @Post('/signin/verify')
+  @ApiResponse({
+    status: 200,
+    description: 'OTP verified, tokens returned.',
+    type: SignInResponse,
+  })
+  async verifySignIn(@Body() body: { userId: string; code: string }) {
+    return this.usersService.verifySignIn(body.userId, body.code);
+  }
+
   @UseGuards(AuthGuard)
   @Delete('/delete/:id')
   @ApiResponse({

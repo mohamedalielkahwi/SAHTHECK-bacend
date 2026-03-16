@@ -25,12 +25,31 @@ enum Role {
   ADMIN
 }
 
+enum OtpType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  TWO_FACTOR
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String
+  type      OtpType
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
 model User{
   userId        String      @id @default(uuid())
   fullName      String?
   email     String   @unique
   password  String?
   phone String?
+  isEmailVerified Boolean @default(false)
+  otps            Otp[]
   gender Gender?
   role Role
   address String?
