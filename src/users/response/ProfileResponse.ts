@@ -41,10 +41,14 @@ export class ProfileResponse {
         description: 'The patient details',
         example: {
             age: 30,
+            height: 175,
+            weight: 70.5,
         },
     })
     patient: {
         age: number;
+        height: number;
+        weight: number;
     };
 
     @ApiProperty({
@@ -54,6 +58,10 @@ export class ProfileResponse {
             bio: 'Specialist in heart diseases',
             licenseNumber: '1234567890',
             isValidated: true,
+            clinic: 'Heart Care Clinic',
+            location: '123 Heart Street, City, Country',
+            latitude: 40.7128,
+            longitude: -74.006,
         },
     })
     specialist: {
@@ -61,6 +69,10 @@ export class ProfileResponse {
         bio: string;
         licenseNumber: string;
         isValidated: boolean;
+        clinic: string;
+        location: string;
+        latitude: number;
+        longitude: number;
     };
 
     @ApiProperty({

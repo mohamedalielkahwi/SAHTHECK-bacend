@@ -30,7 +30,9 @@ export class OtpService {
       data: { userId, code, type: type as any, expiresAt },
     });
 
-    await this.mailService.sendOtp(email, code, type);
+    this.mailService.sendOtp(email, code, type).catch((err) => {
+      console.error('Failed to send OTP:', err);
+    });
     return { message: 'OTP sent successfully' };
   }
 

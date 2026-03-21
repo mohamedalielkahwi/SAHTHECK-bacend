@@ -7,21 +7,21 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 export class OtpController {
   constructor(private readonly otpService: OtpService) {}
 
-  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Post('/send')
-  async sendOtp(@Request() req, @Body() body: { type: string }) {
-    return this.otpService.sendOtp(
-      req.user.userId,
-      req.user.email,
-      body.type,
-    );
+  // otp.controller.ts
+  @Post('/send') // remove @UseGuards(AuthGuard) and @ApiBearerAuth()
+  async sendOtp(@Body() body: { userId: string;email: string; type: string }) {
+    return this.otpService.sendOtp(body.userId, body.email, body.type);
   }
 
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Post('/verify')
-  async verifyOtp(@Request() req, @Body() body: { code: string; type: string }) {
+  async verifyOtp(
+    @Request() req,
+    @Body() body: { code: string; type: string },
+  ) {
     return this.otpService.verifyOtp(req.user.userId, body.code, body.type);
   }
 }

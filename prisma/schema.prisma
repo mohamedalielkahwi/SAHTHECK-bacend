@@ -48,6 +48,7 @@ model User{
   email     String   @unique
   password  String?
   phone String?
+  imageUrl String?
   isEmailVerified Boolean @default(false)
   otps            Otp[]
   gender Gender?
@@ -62,16 +63,42 @@ model User{
 model Patient {
   userId        String      @id
   age Int?
+  weight Float?
+  height Float?
+  medicalHistory MedicalDocument[]
   user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
 }
 
+enum Category {
+  pdf
+  image
+}
+
+model MedicalDocument{
+  userId String
+  id String @id @default(uuid())
+  title String
+  date DateTime
+  type Category
+  category String
+  fileUrl String
+  uploadedAt DateTime @default(now())
+  patient Patient @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
 model Specialist {
-  userId        String      @id
-  speciality String?
-  bio String?
+  userId        String  @id
+  speciality    String?
+  bio           String?
   licenseNumber String
-  isValidated Boolean @default(false)
-  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
+  isValidated   Boolean @default(false)
+  clinic        String?
+  location      String?
+  rating        Float   @default(0)
+  reviewsCount  Int     @default(0)
+  latitude      Float?
+  longitude     Float?
+  user          User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Admin {

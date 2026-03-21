@@ -6,6 +6,7 @@ import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { LoggerMiddleware } from './common/logger.middleware';
 import { OtpModule } from './otp/otp.module';
+import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { OtpModule } from './otp/otp.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    MinioModule,
   ],
   controllers: [AppController],
   providers: [AppService],

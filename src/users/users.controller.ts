@@ -6,13 +6,21 @@ import {
   Patch,
   Post,
   Request,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CreateUserDto } from './DTO/CreateUserDto';
+import { VerifySignInDto } from './DTO/VerifySignInDto';
 import { UsersService } from './users.service';
 import { SignInDto } from './DTO/SignInDto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ProfileResponse } from './response/ProfileResponse';
 import { SignInResponse } from './response/SignInResponse';
 import { RefreshTokenDto } from './DTO/RefreshTokenDto';
@@ -20,6 +28,8 @@ import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { UpdateUserResponse } from './response/UpadteUserResponse';
 import { GoogleAuthGuard } from 'src/auth/google-auth.guard';
 import { GoogleSignupResponse } from './response/GoogleSignupResponse';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { WhoAmiIResponse } from './response/WhoAmiIResponse';
 
 @Controller('users')
 export class UsersController {
@@ -39,13 +49,43 @@ export class UsersController {
     return this.usersService.signIn(signInDto);
   }
 
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Post('/upload-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (!new RegExp(/\/(jpg|jpeg|png|webp)$/).exec(file.mimetype)) {
+          return cb(new Error('Only image files are allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async uploadImage(@Request() req, @UploadedFile() file: Express.Multer.File) {
+    return this.usersService.uploadImage(req.user.userId, file);
+  }
+
   @Post('/signin/verify')
   @ApiResponse({
     status: 200,
     description: 'OTP verified, tokens returned.',
     type: SignInResponse,
   })
-  async verifySignIn(@Body() body: { userId: string; code: string }) {
+  async verifySignIn(@Body() body: VerifySignInDto) {
     return this.usersService.verifySignIn(body.userId, body.code);
   }
 
@@ -58,6 +98,7 @@ export class UsersController {
   async deleteUser(@Request() req) {
     return this.usersService.deleteUser(req.params.id, req.user.userId);
   }
+
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiResponse({
@@ -83,12 +124,20 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @Patch('/validate-doctor/:id')
+  @ApiResponse({
+    status: 200,
+    description: 'The doctor has been successfully validated.',
+  })
   async validateDoctor(@Request() req) {
     return this.usersService.validateDoctor(req.params.id, req.user.userId);
   }
 
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The admin has been successfully validated.',
+  })
   @Patch('/validate-admin/:id')
   async validateAdmin(@Request() req) {
     return this.usersService.validateAdmin(req.params.id, req.user.userId);
@@ -96,6 +145,11 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'the userId and email and role of the authenticated user.',
+    type: WhoAmiIResponse,
+  })
   @Get('/whoami')
   async whoAmI(@Request() req) {
     return {

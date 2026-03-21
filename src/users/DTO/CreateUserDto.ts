@@ -5,16 +5,15 @@ import {
   IsNotEmpty,
   IsNumberString,
   IsOptional,
+  IsNumber,
   IsString,
   Matches,
   MinLength,
 } from 'class-validator';
 import { Gender, Role } from 'generated/prisma/enums';
+
 export class CreateUserDto {
-  @ApiProperty({
-    description: 'The name of the user',
-    example: 'John Doe',
-  })
+  @ApiProperty({ description: 'The name of the user', example: 'John Doe' })
   @IsNotEmpty()
   @IsString()
   fullName: string;
@@ -32,7 +31,6 @@ export class CreateUserDto {
     example: 'password123',
   })
   @IsOptional()
-  @IsNotEmpty()
   @IsString()
   @MinLength(6)
   password: string;
@@ -46,13 +44,10 @@ export class CreateUserDto {
   @Matches(/^[0-9 ]{8}$/, { message: 'phone number must be exactly 8 digits' })
   phone: string;
 
-  @ApiProperty({
-    description: 'The gender of the user',
-    example: 'MALE',
-  })
+  @ApiProperty({ description: 'The gender of the user', example: 'MALE' })
   @IsNotEmpty()
   @IsString()
-  @IsEnum(Gender, { message: 'gender must be either MALE,FEMALE or OTHER' })
+  @IsEnum(Gender, { message: 'gender must be either MALE, FEMALE or OTHER' })
   gender: Gender;
 
   @ApiProperty({
@@ -63,52 +58,96 @@ export class CreateUserDto {
   @IsNotEmpty()
   address: string;
 
-  @ApiProperty({
-    description: 'The role of the user',
-    example: 'ADMIN',
-  })
+  @ApiProperty({ description: 'The role of the user', example: 'PATIENT' })
   @IsString()
   @IsNotEmpty()
-  @IsEnum(Role, { message: 'role must be either ADMIN,PATIENT or DOCTOR' })
+  @IsEnum(Role, { message: 'role must be either ADMIN, PATIENT or DOCTOR' })
   role: Role;
 
+  // ─── PATIENT fields ───────────────────────────────────────────
+
   @ApiProperty({
-    description: 'The age of the Patient',
+    description: 'Age of the patient. Required for PATIENT role',
     example: 30,
   })
   @IsOptional()
-  @IsString()
   @IsNumberString()
-  age?: string;
+  age: string;
 
   @ApiProperty({
-    description: 'The specialization of the Doctor',
-    example: 'Cardiologist',
+    description: 'Weight of the patient in kg. Required for PATIENT role',
+    example: 70.5,
   })
   @IsOptional()
-  @IsNotEmpty()
-  @IsString()
-  speciality?: string;
+  @IsNumber()
+  weight: number;
 
   @ApiProperty({
-    description: 'The biography of the Doctor',
-    example: 'Dr. John Doe is a highly experienced cardiologist with over 20 years of practice.',
+    description: 'Height of the patient in cm. Required for PATIENT role',
+    example: 175.0,
   })
   @IsOptional()
-  @IsNotEmpty()
-  @IsString()
-  bio?: string;
+  @IsNumber()
+  height: number;
+
+  // ─── DOCTOR fields ────────────────────────────────────────────
 
   @ApiProperty({
-    description: 'The license number of the Doctor',
-    example: '1234/56 or 12345/67',
+    description: 'Specialization of the doctor. Required for DOCTOR role',
+    example: 'Cardiology',
   })
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
+  speciality: string;
+
+  @ApiProperty({
+    description: 'Biography of the doctor. Required for DOCTOR role',
+    example: 'Dr. John Doe is a highly experienced cardiologist.',
+  })
+  @IsOptional()
+  @IsString()
+  bio: string;
+
+  @ApiProperty({
+    description: 'License number of the doctor. Required for DOCTOR role',
+    example: '1234/95',
+  })
+  @IsOptional()
+  @IsString()
   @Matches(/^\d{4,5}\/\d{2}$/, {
     message: 'licenseNumber must be in format XXXX/YY or XXXXX/YY',
   })
   licenseNumber: string;
 
+  @ApiProperty({
+    description: 'Clinic name of the doctor',
+    example: 'Clinique des Oliviers',
+  })
+  @IsOptional()
+  @IsString()
+  clinic: string;
+
+  @ApiProperty({
+    description: 'Location of the doctor clinic',
+    example: 'Tunis, Tunisia',
+  })
+  @IsOptional()
+  @IsString()
+  location: string;
+
+  @ApiProperty({
+    description: 'Latitude of the doctor clinic',
+    example: 36.8065,
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude: number;
+
+  @ApiProperty({
+    description: 'Longitude of the doctor clinic',
+    example: 10.1815,
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude: number;
 }

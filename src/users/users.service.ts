@@ -8,6 +8,7 @@ import { ConfigType } from '@nestjs/config';
 import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { CreateUserDto } from './DTO/CreateUserDto';
 import { OtpService } from 'src/otp/otp.service';
+import { MinioService } from 'src/minio/minio.service';
 interface GoogleProfile {
   email: string;
   fullName: string;
@@ -17,6 +18,7 @@ interface GoogleProfile {
 export class UsersService {
   constructor(
     private readonly otpService: OtpService,
+    private readonly minioService: MinioService,
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     @Inject(refreshJwtConfig.KEY)
@@ -32,9 +34,15 @@ export class UsersService {
       address,
       role,
       age,
+      height,
+      weight,
       speciality,
       bio,
       licenseNumber,
+      clinic,
+      location,
+      latitude,
+      longitude,
     } = createUserDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -65,6 +73,8 @@ export class UsersService {
             ? {
                 create: {
                   age: age ? Number.parseInt(age) : undefined,
+                  weight,
+                  height,
                 },
               }
             : undefined,
@@ -75,6 +85,10 @@ export class UsersService {
                   speciality,
                   bio,
                   licenseNumber,
+                  clinic,
+                  location,
+                  latitude,
+                  longitude,
                 },
               }
             : undefined,
@@ -98,6 +112,8 @@ export class UsersService {
         patient: {
           select: {
             age: true,
+            height: true,
+            weight: true,
           },
         },
         specialist: {
@@ -106,6 +122,10 @@ export class UsersService {
             bio: true,
             licenseNumber: true,
             isValidated: true,
+            clinic: true,
+            location: true,
+            latitude: true,
+            longitude: true,
           },
         },
         admin: {
@@ -119,7 +139,27 @@ export class UsersService {
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
   }
-  async signIn(signInDto): Promise<{ require2FA: boolean ,userId: string}> {
+  async uploadImage(userId: string, file: Express.Multer.File) {
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+    if (!user) throw new ConflictException('User not found');
+    if (user.imageUrl) {
+      await this.minioService.deleteFile(user.imageUrl);
+    }
+
+    // upload new image
+    const imageUrl = await this.minioService.uploadFile(file, 'profile-images');
+
+    // save URL to database
+    await this.prisma.user.update({
+      where: { userId },
+      data: { imageUrl },
+    });
+
+    return { imageUrl };
+  }
+  async signIn(
+    signInDto,
+  ): Promise<{ require2FA: boolean; userId: string; email: string }> {
     const { email, password } = signInDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -135,8 +175,12 @@ export class UsersService {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
     console.log('User authenticated, sending OTP for 2FA');
-    await this.otpService.sendOtp(user.userId, user.email, 'TWO_FACTOR');
-    return { require2FA: true ,userId: user.userId};
+    this.otpService
+      .sendOtp(user.userId, user.email, 'TWO_FACTOR')
+      .catch((err) => {
+        console.error('Failed to send OTP:', err);
+      });
+    return { require2FA: true, userId: user.userId, email: user.email };
   }
 
   async verifySignIn(userId: string, code: string): Promise<SignInResponse> {
@@ -144,13 +188,24 @@ export class UsersService {
 
     const user = await this.prisma.user.findUnique({ where: { userId } });
 
-    const payload = { email: user!.email, userId: user!.userId, role: user!.role };
+    const payload = {
+      email: user!.email,
+      userId: user!.userId,
+      role: user!.role,
+    };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
       this.jwtService.signAsync(payload, this.refreshTokenConfig),
     ]);
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      userId: user!.userId,
+      email: user!.email,
+      role: user!.role,
+      imageUrl: user!.imageUrl ? user!.imageUrl : undefined,
+    };
   }
 
   async deleteUser(userId: string, id: string) {
@@ -196,6 +251,8 @@ export class UsersService {
         patient: {
           select: {
             age: true,
+            height: true,
+            weight: true,
           },
         },
         specialist: {
@@ -204,6 +261,10 @@ export class UsersService {
             bio: true,
             licenseNumber: true,
             isValidated: true,
+            clinic: true,
+            location: true,
+            latitude: true,
+            longitude: true,
           },
         },
         admin: {
@@ -257,7 +318,7 @@ export class UsersService {
         isValidated: true,
       },
     });
-    return { message: 'Doctor validated successfully' };
+    return { message: 'The doctor has been successfully validated.' };
   }
   async validateAdmin(userId: string, id: string) {
     const admin = await this.prisma.admin.findUnique({
@@ -284,10 +345,21 @@ export class UsersService {
         canModerate: true,
       },
     });
-    return { message: 'Admin validated successfully' };
+    return { message: 'The admin has been successfully validated.' };
   }
   async updateUser(userId: string, role: string, updateUserDto: UpdateUserDto) {
-    const { fullName, email, phone, address, age, bio } = updateUserDto;
+    const {
+      fullName,
+      email,
+      phone,
+      address,
+      age,
+      bio,
+      clinic,
+      location,
+      latitude,
+      longitude,
+    } = updateUserDto;
     try {
       const updateUser = await this.prisma.user.update({
         where: {
@@ -303,6 +375,10 @@ export class UsersService {
               ? {
                   update: {
                     bio,
+                    clinic,
+                    location,
+                    latitude,
+                    longitude,
                   },
                 }
               : undefined,
@@ -325,6 +401,8 @@ export class UsersService {
           patient: {
             select: {
               age: true,
+              height: true,
+              weight: true,
             },
           },
           specialist: {
@@ -333,6 +411,10 @@ export class UsersService {
               bio: true,
               licenseNumber: true,
               isValidated: true,
+              clinic: true,
+              location: true,
+              latitude: true,
+              longitude: true,
             },
           },
           admin: {
@@ -380,6 +462,11 @@ export class UsersService {
       return {
         accessToken: accessToken,
         refreshToken: refreshToken,
+        isNew: false,
+        userId: user.userId,
+        email: user.email,
+        role: user.role,
+        imageUrl: user.imageUrl,
       };
     } else {
       const newUser = await this.prisma.user.create({

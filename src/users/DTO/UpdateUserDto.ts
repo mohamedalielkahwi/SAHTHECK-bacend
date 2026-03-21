@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   IsEmail,
   IsNotEmpty,
+  IsNumber,
   IsNumberString,
   IsOptional,
   IsString,
@@ -52,6 +53,22 @@ export class UpdateUserDto {
   age?: string;
 
   @ApiProperty({
+    description: 'Weight of the patient in kg. Required for PATIENT role',
+    example: 70.5,
+  })
+  @IsOptional()
+  @IsNumber()
+  weight: number;
+
+  @ApiProperty({
+    description: 'Height of the patient in cm. Required for PATIENT role',
+    example: 175.0,
+  })
+  @IsOptional()
+  @IsNumber()
+  height: number;
+
+  @ApiProperty({
     description: 'The biography of the Doctor',
     example:
       'Dr. John Doe is a highly experienced cardiologist with over 20 years of practice.',
@@ -60,4 +77,36 @@ export class UpdateUserDto {
   @IsNotEmpty()
   @IsString()
   bio?: string;
+
+  @ApiProperty({
+    description: 'Clinic name of the doctor',
+    example: 'Clinique des Oliviers',
+  })
+  @IsOptional()
+  @IsString()
+  clinic: string;
+
+  @ApiProperty({
+    description: 'Location of the doctor clinic',
+    example: 'Tunis, Tunisia',
+  })
+  @IsOptional()
+  @IsString()
+  location: string;
+
+  @ApiProperty({
+    description: 'Latitude of the doctor clinic',
+    example: 36.8065,
+  })
+  @IsOptional()
+  @IsNumber()
+  latitude: number;
+
+  @ApiProperty({
+    description: 'Longitude of the doctor clinic',
+    example: 10.1815,
+  })
+  @IsOptional()
+  @IsNumber()
+  longitude: number;
 }
