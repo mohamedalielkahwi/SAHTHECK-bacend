@@ -174,6 +174,7 @@ export class UsersController {
       updateUserDto,
     );
   }
+
   @Get('/auth/google')
   @UseGuards(GoogleAuthGuard)
   async googleAuth() {}
@@ -187,5 +188,14 @@ export class UsersController {
   })
   async googleAuthCallback(@Request() req) {
     return this.usersService.googlesignup(req.user);
+  }
+
+  @Post('/auth/google/mobile')
+  @ApiResponse({
+    status: 200,
+    type: GoogleSignupResponse,
+  })
+  async googleMobileAuth(@Body() body: { idToken: string }) {
+    return this.usersService.googleMobileAuth(body.idToken);
   }
 }

@@ -24,8 +24,24 @@ export class MinioService implements OnModuleInit {
         await this.client.makeBucket(this.bucket);
         console.log(`Bucket ${this.bucket} created`);
       }
+
+      // only profile-images folder is public, rest is private
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucket}/profile-images/*`], // 👈 only this folder
+          },
+        ],
+      };
+
+      await this.client.setBucketPolicy(this.bucket, JSON.stringify(policy));
+      console.log(`Bucket policy set: profile-images public, rest private`);
     } catch (error) {
-      console.error('MinIO connection failed:', error.message);
+      console.error('MinIO initialization error:', error.message);
     }
   }
 

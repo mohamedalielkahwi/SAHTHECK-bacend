@@ -1,22 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class GoogleSignupResponse {
-  @ApiProperty({
-    description: 'The access token for the authenticated user',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-  })
+  @ApiProperty({ example: 'eyJ...' })
   accessToken: string;
 
-  @ApiProperty({
-    description: 'The refresh token for the authenticated user',
-    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-  })
+  @ApiProperty({ example: 'eyJ...' })
   refreshToken: string;
 
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
+  userId: string;
+
+  @ApiProperty({ example: 'john@gmail.com' })
+  email: string;
+
+  @ApiProperty({ example: 'PATIENT' })
+  role: string;
+
   @ApiProperty({
-    description: 'Indicates if the user is newly created and needs to complete their profile',
-    example: true,
-    required: false,
+    example: 'http://localhost:9000/sahteck/profile-images/123.jpg',
+    nullable: true,
   })
-  isNew?: boolean;
+  imageUrl?: string;
+
+  @ApiProperty({ example: false })
+  isNew: boolean;
 }

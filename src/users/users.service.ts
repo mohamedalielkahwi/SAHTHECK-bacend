@@ -9,6 +9,9 @@ import { UpdateUserDto } from './DTO/UpdateUserDto';
 import { CreateUserDto } from './DTO/CreateUserDto';
 import { OtpService } from 'src/otp/otp.service';
 import { MinioService } from 'src/minio/minio.service';
+import { OAuth2Client } from 'google-auth-library';
+import { Readable } from 'node:stream';
+
 interface GoogleProfile {
   email: string;
   fullName: string;
@@ -47,6 +50,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: {
         email,
+        phone,
       },
     });
     if (user) throw new ConflictException('User already exists');
@@ -247,6 +251,8 @@ export class UsersService {
         email: true,
         phone: true,
         address: true,
+        gender: true,
+        imageUrl: true,
         role: true,
         patient: {
           select: {
@@ -286,7 +292,8 @@ export class UsersService {
       );
       const newAcessToken = await this.jwtService.signAsync({
         email: payload.email,
-        id: payload.id,
+        userId: payload.userId,
+        role: payload.role,
       });
       return { accessToken: newAcessToken };
     } catch (error) {
@@ -354,6 +361,8 @@ export class UsersService {
       phone,
       address,
       age,
+      height,
+      weight,
       bio,
       clinic,
       location,
@@ -385,8 +394,17 @@ export class UsersService {
           patient:
             role === 'PATIENT'
               ? {
-                  update: {
-                    age: age ? Number.parseInt(age) : undefined,
+                  upsert: {
+                    create: {
+                      age: age ? Number.parseInt(age) : 0,
+                      height: height ?? 0,
+                      weight: weight ?? 0,
+                    },
+                    update: {
+                      age: age ? Number.parseInt(age) : undefined,
+                      height,
+                      weight,
+                    },
                   },
                 }
               : undefined,
@@ -443,7 +461,7 @@ export class UsersService {
     }
   }
   async googlesignup(googleUser: GoogleProfile) {
-    const { email, fullName } = googleUser;
+    const { email, fullName, picture } = googleUser;
     const user = await this.prisma.user.findUnique({
       where: {
         email,
@@ -469,13 +487,44 @@ export class UsersService {
         imageUrl: user.imageUrl,
       };
     } else {
+      let imageUrl: string | null = null;
+      if (picture) {
+        try {
+          // download the image buffer from Google
+          const response = await fetch(picture);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+
+          // create a fake Multer file object
+          const file: Express.Multer.File = {
+            buffer,
+            originalname: `${Date.now()}-google-avatar.jpg`,
+            mimetype: 'image/jpeg',
+            size: buffer.length,
+            fieldname: 'file',
+            encoding: '7bit',
+            stream: Readable.from(buffer), // 👈 fix null error
+            destination: '',
+            filename: '',
+            path: '',
+          };
+
+          imageUrl = await this.minioService.uploadFile(file, 'profile-images');
+        } catch (error) {
+          console.error('Failed to upload Google profile picture:', error);
+          // if upload fails just continue without image
+        }
+      }
+
       const newUser = await this.prisma.user.create({
         data: {
-          email: email,
-          fullName: fullName,
+          email,
+          fullName,
           role: 'PATIENT',
+          imageUrl, // 👈 save MinIO URL
         },
       });
+
       const payload = {
         email: newUser.email,
         userId: newUser.userId.toString(),
@@ -485,11 +534,37 @@ export class UsersService {
         this.jwtService.signAsync(payload),
         this.jwtService.signAsync(payload, this.refreshTokenConfig),
       ]);
+
       return {
-        accessToken: accessToken,
-        refreshToken: refreshToken,
+        accessToken,
+        refreshToken,
         isNew: true,
+        userId: newUser.userId,
+        email: newUser.email,
+        role: newUser.role,
+        imageUrl: newUser.imageUrl,
       };
     }
+  }
+  async googleMobileAuth(idToken: string) {
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    // verify the token Google sent
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) throw new ConflictException('Invalid Google token');
+
+    const googleUser = {
+      email: payload.email!,
+      fullName: payload.name ?? '',
+      picture: payload.picture ?? '',
+    };
+
+    // reuse your existing googlesignup logic
+    return this.googlesignup(googleUser);
   }
 }

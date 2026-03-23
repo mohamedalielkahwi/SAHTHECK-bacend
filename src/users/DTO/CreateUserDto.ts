@@ -84,7 +84,7 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: 'Height of the patient in cm. Required for PATIENT role',
-    example: 175.0,
+    example: 175.1,
   })
   @IsOptional()
   @IsNumber()
