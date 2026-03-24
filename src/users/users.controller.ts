@@ -56,7 +56,8 @@ export class UsersController {
     FileInterceptor('file', {
       limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
-        if (!new RegExp(/\/(jpg|jpeg|png|webp)$/).exec(file.mimetype)) {
+        if (!file.mimetype.startsWith('image/')) {
+          // 👈 replace the regex with this
           return cb(new Error('Only image files are allowed'), false);
         }
         cb(null, true);
@@ -97,6 +98,17 @@ export class UsersController {
   })
   async deleteUser(@Request() req) {
     return this.usersService.deleteUser(req.params.id, req.user.userId);
+  }
+
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @Delete('/delete-account')
+  @ApiResponse({
+    status: 200,
+    description: 'The account has been successfully deleted.',
+  })
+  async deleteOwnAccount(@Request() req) {
+    return this.usersService.deleteOwnAccount(req.user.userId);
   }
 
   @UseGuards(AuthGuard)

@@ -5,7 +5,8 @@ import { Request, Response, NextFunction } from 'express';
 export class LoggerMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const now = Date.now();
-    const { method, url } = req;
+    const { method } = req;
+    const url = req.originalUrl; // 👈 change from req.url to req.originalUrl
 
     console.log(`[${new Date().toISOString()}] → ${method} ${url}`);
 
@@ -14,9 +15,13 @@ export class LoggerMiddleware implements NestMiddleware {
       const statusCode = res.statusCode;
 
       if (statusCode >= 400) {
-        console.error(`[${new Date().toISOString()}] ✗ ${method} ${url} ${statusCode} - ${duration}ms`);
+        console.error(
+          `[${new Date().toISOString()}] ✗ ${method} ${url} ${statusCode} - ${duration}ms`,
+        );
       } else {
-        console.log(`[${new Date().toISOString()}] ✓ ${method} ${url} ${statusCode} - ${duration}ms`);
+        console.log(
+          `[${new Date().toISOString()}] ✓ ${method} ${url} ${statusCode} - ${duration}ms`,
+        );
       }
     });
 

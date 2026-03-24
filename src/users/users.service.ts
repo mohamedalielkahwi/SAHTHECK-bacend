@@ -567,4 +567,17 @@ export class UsersService {
     // reuse your existing googlesignup logic
     return this.googlesignup(googleUser);
   }
+
+  async deleteOwnAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+    if (!user) throw new ConflictException('User not found');
+
+    // delete profile image from MinIO if exists
+    if (user.imageUrl) {
+      await this.minioService.deleteFile(user.imageUrl).catch(() => {});
+    }
+
+    await this.prisma.user.delete({ where: { userId } });
+    return { message: 'Account deleted successfully' };
+  }
 }
