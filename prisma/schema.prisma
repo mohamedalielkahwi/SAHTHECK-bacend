@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -31,6 +28,24 @@ enum OtpType {
   TWO_FACTOR
 }
 
+enum Category {
+  pdf
+  image
+}
+
+enum Status {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ContentType {
+  ARTICLE
+  VIDEO
+  PODCAST
+  IMAGE
+}
+
 model Otp {
   id        String   @id @default(uuid())
   userId    String
@@ -42,67 +57,124 @@ model Otp {
   user      User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
-model User{
-  userId        String      @id @default(uuid())
-  fullName      String?
-  email     String   @unique
-  password  String?
-  phone String?
-  imageUrl String?
-  isEmailVerified Boolean @default(false)
+model User {
+  userId          String      @id @default(uuid())
+  fullName        String?
+  email           String      @unique
+  password        String?
+  phone           String?
+  imageUrl        String?
+  isEmailVerified Boolean     @default(false)
+  gender          Gender?
+  role            Role
+  address         String?
+  createdAt       DateTime    @default(now())
   otps            Otp[]
-  gender Gender?
-  role Role
-  address String?
-  patient Patient?
-  specialist Specialist?
-  admin Admin?
-  createdAt DateTime @default(now())
+  patient         Patient?
+  specialist      Specialist?
+  admin           Admin?
 }
 
 model Patient {
-  userId        String      @id
-  age Int?
-  weight Float?
-  height Float?
+  userId         String            @id
+  age            Int?
+  weight         Float?
+  height         Float?
+  user           User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
   medicalHistory MedicalDocument[]
-  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
+  appointments   Appointment[]
 }
 
-enum Category {
-  pdf
-  image
-}
-
-model MedicalDocument{
-  userId String
-  id String @id @default(uuid())
-  title String
-  date DateTime
-  type Category
-  category String
-  fileUrl String
+model MedicalDocument {
+  id         String   @id @default(uuid())
+  userId     String
+  title      String
+  date       DateTime
+  type       Category
+  category   String
+  fileUrl    String
   uploadedAt DateTime @default(now())
-  patient Patient @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  patient    Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Specialist {
-  userId        String  @id
+  userId        String        @id
   speciality    String?
   bio           String?
   licenseNumber String
-  isValidated   Boolean @default(false)
+  isValidated   Boolean       @default(false)
   clinic        String?
   location      String?
-  rating        Float   @default(0)
-  reviewsCount  Int     @default(0)
+  rating        Float         @default(0)
+  reviewsCount  Int           @default(0)
   latitude      Float?
   longitude     Float?
-  user          User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  clinics       Clinic[]
+  appointments  Appointment[]
+  contents      Content[]
+  exercises     Exercise[]
 }
 
 model Admin {
-  userId        String      @id
+  userId      String  @id
   canModerate Boolean @default(false)
-  user User @relation(fields: [userId], references: [userId],onDelete: Cascade)
+  user        User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+}
+
+model Clinic {
+  clinicId     String        @id @default(uuid())
+  name         String
+  address      String
+  phone        String
+  email        String
+  specialists  Specialist[]
+  appointments Appointment[]
+}
+
+model AvailabeSlot {
+  availabilityId String        @id @default(uuid())
+  startTime      DateTime
+  endTime        DateTime
+  date           DateTime
+  isBooked       Boolean       @default(false)
+  appointments   Appointment[]
+}
+
+model Appointment {
+  appointmentId  String       @id @default(uuid())
+  patientId      String
+  specialistId   String
+  clinicId       String?
+  availabilityId String
+  date           DateTime
+  time           String
+  reason         String
+  status         Status       @default(SCHEDULED)
+  patient        Patient      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  clinic         Clinic?      @relation(fields: [clinicId], references: [clinicId], onDelete: Cascade)
+  AvailableSlot  AvailabeSlot @relation(fields: [availabilityId], references: [availabilityId], onDelete: Cascade)
+}
+
+model Content {
+  contentId     String      @id @default(uuid())
+  title         String
+  description   String
+  type          ContentType
+  url           String
+  publishedById String
+  isPublished   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  specialist    Specialist  @relation(fields: [publishedById], references: [userId], onDelete: Cascade)
+}
+
+model Exercise {
+  exerciseId  String     @id @default(uuid())
+  name        String
+  description String
+  videoUrl    String?
+  createdById String
+  createdAt   DateTime   @default(now())
+  specialist  Specialist @relation(fields: [createdById], references: [userId], onDelete: Cascade)
 }

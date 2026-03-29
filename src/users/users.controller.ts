@@ -92,6 +92,7 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @Delete('/delete/:id')
+  @ApiBearerAuth()
   @ApiResponse({
     status: 200,
     description: 'The user has been successfully deleted.',
