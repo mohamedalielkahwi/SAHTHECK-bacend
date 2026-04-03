@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { LoggerMiddleware } from './common/logger.middleware';
 import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
+import { AdminModule } from './admins/admins.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MinioModule } from './minio/minio.module';
       isGlobal: true,
     }),
     MinioModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
