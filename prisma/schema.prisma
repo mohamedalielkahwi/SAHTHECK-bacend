@@ -41,13 +41,19 @@ enum Status {
 
 enum Category{
   IRM
+  scanner
+  radioStandard
+  echographie
+  bilanKene
+  protocoleDeReEducation
+  resultatsDAnalyse
 }
 
 enum Title{
   radiography
   prescription
-  bilanKine
-  analyseDuSang
+  physieotherapy
+  bilanBiologique
 }
 enum PostType {
   ARTICLE
@@ -101,6 +107,7 @@ model MedicalDocument {
   date       DateTime
   type       Type
   category   Category
+  description String?
   fileUrl    String
   uploadedAt DateTime @default(now())
   patient    Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
