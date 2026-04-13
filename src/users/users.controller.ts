@@ -30,6 +30,7 @@ import { GoogleAuthGuard } from 'src/auth/google-auth.guard';
 import { GoogleSignupResponse } from './response/GoogleSignupResponse';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { WhoAmiIResponse } from './response/WhoAmiIResponse';
+import { ChangePasswordDto } from './DTO/ChangePasswordDto';
 
 @Controller('users')
 export class UsersController {
@@ -210,5 +211,16 @@ export class UsersController {
   })
   async googleMobileAuth(@Body() body: { idToken: string }) {
     return this.usersService.googleMobileAuth(body.idToken);
+  }
+
+  @Patch('change-password')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The password has been successfully changed.',
+  })
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.usersService.changePassword(req.user.userId, changePasswordDto);
   }
 }

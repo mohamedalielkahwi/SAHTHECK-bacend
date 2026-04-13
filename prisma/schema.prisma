@@ -83,6 +83,7 @@ model User {
   gender          Gender?
   role            Role
   address         String?
+  isGoogleAccount Boolean     @default(false)
   createdAt       DateTime    @default(now())
   otps            Otp[]
   patient         Patient?

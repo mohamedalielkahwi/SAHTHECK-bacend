@@ -11,6 +11,7 @@ import { OtpService } from 'src/otp/otp.service';
 import { MinioService } from 'src/minio/minio.service';
 import { OAuth2Client } from 'google-auth-library';
 import { Readable } from 'node:stream';
+import { ChangePasswordDto } from './DTO/ChangePasswordDto';
 
 interface GoogleProfile {
   email: string;
@@ -580,5 +581,29 @@ export class UsersService {
 
     await this.prisma.user.delete({ where: { userId } });
     return { message: 'Account deleted successfully' };
+  }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const { currentPassword, newPassword } = changePasswordDto;
+    const user = await this.prisma.user.findUnique({
+      where: { userId: userId},
+    });
+    if (!user) throw new ConflictException('User not found');
+
+    if (!user.password) {
+      throw new ConflictException('you can not change password for Google accounts, please use Google sign in instead.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) throw new ConflictException('Invalid password');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { userId: userId },
+      data: { password: hashedPassword },
+    });
+    return { message: 'Password changed successfully' };
   }
 }

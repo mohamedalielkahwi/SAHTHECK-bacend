@@ -56,7 +56,7 @@ export class MinioService implements OnModuleInit {
       'Content-Type': file.mimetype,
     });
 
-    return `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${this.bucket}/${fileName}`;
+    return `http://${process.env.MINIO_PUBLIC_URL}:${process.env.MINIO_PORT}/${this.bucket}/${fileName}`;
   }
 
   async deleteFile(fileUrl: string): Promise<void> {
