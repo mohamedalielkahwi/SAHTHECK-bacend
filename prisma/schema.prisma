@@ -28,7 +28,7 @@ enum OtpType {
   TWO_FACTOR
 }
 
-enum Category {
+enum Type {
   pdf
   image
 }
@@ -39,10 +39,19 @@ enum Status {
   CANCELLED
 }
 
-enum ContentType {
+enum Category{
+  IRM
+}
+
+enum Title{
+  radiography
+  prescription
+  bilanKine
+  analyseDuSang
+}
+enum PostType {
   ARTICLE
   VIDEO
-  PODCAST
   IMAGE
 }
 
@@ -88,10 +97,10 @@ model Patient {
 model MedicalDocument {
   id         String   @id @default(uuid())
   userId     String
-  title      String
+  title      Title
   date       DateTime
-  type       Category
-  category   String
+  type       Type
+  category   Category
   fileUrl    String
   uploadedAt DateTime @default(now())
   patient    Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
@@ -112,7 +121,7 @@ model Specialist {
   user          User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
   clinics       Clinic[]
   appointments  Appointment[]
-  contents      Content[]
+  posts      Post[]
   exercises     Exercise[]
 }
 
@@ -143,26 +152,26 @@ model AvailabeSlot {
 
 model Appointment {
   appointmentId  String       @id @default(uuid())
-  patientId      String
+  patientId      String?
   specialistId   String
   clinicId       String?
   availabilityId String
-  date           DateTime
-  time           String
+  date           DateTime @db.Date
+  time           DateTime @db.Time(6)
   reason         String
   status         Status       @default(SCHEDULED)
-  patient        Patient      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  patient        Patient?      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
   specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
   clinic         Clinic?      @relation(fields: [clinicId], references: [clinicId], onDelete: Cascade)
   AvailableSlot  AvailabeSlot @relation(fields: [availabilityId], references: [availabilityId], onDelete: Cascade)
 }
 
-model Content {
-  contentId     String      @id @default(uuid())
+model Post {
+  postId     String      @id @default(uuid())
   title         String
   description   String
-  type          ContentType
-  url           String
+  type          PostType
+  url           String?
   publishedById String
   isPublished   Boolean     @default(false)
   createdAt     DateTime    @default(now())

@@ -33,7 +33,10 @@ export class MinioService implements OnModuleInit {
             Effect: 'Allow',
             Principal: { AWS: ['*'] },
             Action: ['s3:GetObject'],
-            Resource: [`arn:aws:s3:::${this.bucket}/profile-images/*`], // 👈 only this folder
+            Resource: [
+              `arn:aws:s3:::${this.bucket}/profile-images/*`,
+              `arn:aws:s3:::${this.bucket}/posts/*`,
+            ], // 👈 only this folder
           },
         ],
       };
@@ -45,10 +48,7 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  async uploadFile(
-    file: Express.Multer.File,
-    folder: 'profile-images' | 'medical-documents' | 'videos',
-  ): Promise<string> {
+  async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
     const fileName = `${folder}/${Date.now()}-${file.originalname}`;
 
     await this.client.putObject(this.bucket, fileName, file.buffer, file.size, {

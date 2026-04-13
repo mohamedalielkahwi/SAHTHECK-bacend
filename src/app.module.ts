@@ -8,6 +8,7 @@ import { LoggerMiddleware } from './common/logger.middleware';
 import { OtpModule } from './otp/otp.module';
 import { MinioModule } from './minio/minio.module';
 import { AdminModule } from './admins/admins.module';
+import { DoctorsModule } from './doctors/doctors.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AdminModule } from './admins/admins.module';
     }),
     MinioModule,
     AdminModule,
+    DoctorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

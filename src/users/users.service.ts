@@ -416,6 +416,7 @@ export class UsersService {
           phone: true,
           address: true,
           role: true,
+          imageUrl: true,
           patient: {
             select: {
               age: true,

@@ -36,6 +36,8 @@ export class ProfileResponse {
         example: 'PATIENT',
     })
     role: string;
+
+    
     
     @ApiProperty({
         description: 'The patient details',
