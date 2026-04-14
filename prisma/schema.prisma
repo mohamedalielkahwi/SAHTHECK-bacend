@@ -89,6 +89,30 @@ model User {
   patient         Patient?
   specialist      Specialist?
   admin           Admin?
+  messages       Message[]
+}
+
+model Conversation {
+  conversationId String    @id @default(uuid())
+  patientId      String
+  specialistId   String
+  appointmentId  String?   @unique
+  createdAt      DateTime  @default(now())
+  patient        Patient   @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  specialist     Specialist @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  appointment    Appointment? @relation(fields: [appointmentId], references: [appointmentId], onDelete: SetNull)
+  messages       Message[]
+}
+
+model Message {
+  messageId      String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [conversationId], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [userId], onDelete: Cascade)
 }
 
 model Patient {
@@ -99,6 +123,7 @@ model Patient {
   user           User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
   medicalHistory MedicalDocument[]
   appointments   Appointment[]
+  conversations  Conversation[]
 }
 
 model MedicalDocument {
@@ -131,6 +156,8 @@ model Specialist {
   appointments  Appointment[]
   posts      Post[]
   exercises     Exercise[]
+  conversations  Conversation[]
+  availableSlots AvailabeSlot[]
 }
 
 model Admin {
@@ -151,11 +178,13 @@ model Clinic {
 
 model AvailabeSlot {
   availabilityId String        @id @default(uuid())
+  specialistId   String
   startTime      DateTime
   endTime        DateTime
   date           DateTime
   isBooked       Boolean       @default(false)
-  appointments   Appointment[]
+  specialist     Specialist    @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  appointments   Appointment?
 }
 
 model Appointment {
@@ -163,15 +192,16 @@ model Appointment {
   patientId      String?
   specialistId   String
   clinicId       String?
-  availabilityId String
-  date           DateTime @db.Date
-  time           DateTime @db.Time(6)
+  availabilityId String       @unique
+  place          String?
   reason         String
   status         Status       @default(SCHEDULED)
-  patient        Patient?      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  patient        Patient?     @relation(fields: [patientId], references: [userId], onDelete: Cascade)
   specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
   clinic         Clinic?      @relation(fields: [clinicId], references: [clinicId], onDelete: Cascade)
   AvailableSlot  AvailabeSlot @relation(fields: [availabilityId], references: [availabilityId], onDelete: Cascade)
+  conversation   Conversation?
 }
 
 model Post {

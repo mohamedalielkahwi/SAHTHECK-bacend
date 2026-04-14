@@ -333,66 +333,66 @@ async function main() {
   console.log(`✅ Clinics created`);
 
   // ─── Available Slots ─────────────────────────────────────────────
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
+  // const tomorrow = new Date();
+  // tomorrow.setDate(tomorrow.getDate() + 1);
+  // tomorrow.setHours(0, 0, 0, 0);
 
-  const slots: Array<Awaited<ReturnType<typeof prisma.availabeSlot.create>>> =
-    [];
-  for (let i = 0; i < 4; i++) {
-    const slot = await prisma.availabeSlot.create({
-      data: {
-        date: tomorrow,
-        startTime: new Date(tomorrow.getTime() + (9 + i * 2) * 60 * 60 * 1000),
-        endTime: new Date(tomorrow.getTime() + (10 + i * 2) * 60 * 60 * 1000),
-        isBooked: i < 2,
-      },
-    });
-    slots.push(slot);
-  }
+  // const slots: Array<Awaited<ReturnType<typeof prisma.availabeSlot.create>>> =
+  //   [];
+  // for (let i = 0; i < 4; i++) {
+  //   const slot = await prisma.availabeSlot.create({
+  //     data: {
+  //       date: tomorrow,
+  //       startTime: new Date(tomorrow.getTime() + (9 + i * 2) * 60 * 60 * 1000),
+  //       endTime: new Date(tomorrow.getTime() + (10 + i * 2) * 60 * 60 * 1000),
+  //       isBooked: i < 2,
+  //     },
+  //   });
+  //   slots.push(slot);
+  // }
   console.log(`✅ Available slots created`);
 
   // ─── Appointments ────────────────────────────────────────────────
   // ─── Appointments ────────────────────────────────────────────────
-await prisma.appointment.create({
-  data: {
-    patientId: createdPatients[0].userId,
-    specialistId: createdDoctors[0].userId,
-    clinicId: clinic1.clinicId,
-    availabilityId: slots[0].availabilityId,
-    date: tomorrow,                              // ✅ already DateTime
-    time: new Date('1970-01-01T09:00:00.000Z'), // 👈 change from '09:00' string to DateTime
-    reason: 'Consultation cardiologique de routine',
-    status: 'SCHEDULED',
-  },
-});
+// await prisma.appointment.create({
+//   data: {
+//     patientId: createdPatients[0].userId,
+//     specialistId: createdDoctors[0].userId,
+//     clinicId: clinic1.clinicId,
+//     availabilityId: slots[0].availabilityId,
+//     date: tomorrow,                              // ✅ already DateTime
+//     time: new Date('1970-01-01T09:00:00.000Z'), // 👈 change from '09:00' string to DateTime
+//     reason: 'Consultation cardiologique de routine',
+//     status: 'SCHEDULED',
+//   },
+// });
 
-await prisma.appointment.create({
-  data: {
-    patientId: createdPatients[1].userId,
-    specialistId: createdDoctors[0].userId,
-    clinicId: clinic1.clinicId,
-    availabilityId: slots[1].availabilityId,
-    date: tomorrow,
-    time: new Date('1970-01-01T11:00:00.000Z'), // 👈 change
-    reason: 'Suivi post-opératoire',
-    status: 'SCHEDULED',
-  },
-});
+// await prisma.appointment.create({
+//   data: {
+//     patientId: createdPatients[1].userId,
+//     specialistId: createdDoctors[0].userId,
+//     clinicId: clinic1.clinicId,
+//     availabilityId: slots[1].availabilityId,
+//     date: tomorrow,
+//     time: new Date('1970-01-01T11:00:00.000Z'), // 👈 change
+//     reason: 'Suivi post-opératoire',
+//     status: 'SCHEDULED',
+//   },
+// });
 
-await prisma.appointment.create({
-  data: {
-    patientId: createdPatients[2].userId,
-    specialistId: createdDoctors[1].userId,
-    clinicId: clinic1.clinicId,
-    availabilityId: slots[2].availabilityId,
-    date: tomorrow,
-    time: new Date('1970-01-01T13:00:00.000Z'), // 👈 change
-    reason: 'Douleurs chroniques',
-    status: 'COMPLETED',
-  },
-});
-  console.log(`✅ Appointments created`);
+// await prisma.appointment.create({
+//   data: {
+//     patientId: createdPatients[2].userId,
+//     specialistId: createdDoctors[1].userId,
+//     clinicId: clinic1.clinicId,
+//     availabilityId: slots[2].availabilityId,
+//     date: tomorrow,
+//     time: new Date('1970-01-01T13:00:00.000Z'), // 👈 change
+//     reason: 'Douleurs chroniques',
+//     status: 'COMPLETED',
+//   },
+// });
+//   console.log(`✅ Appointments created`);
 
   // ─── Content ────────────────────────────────────────────────────
   await prisma.post.createMany({

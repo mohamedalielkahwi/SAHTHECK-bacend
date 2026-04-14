@@ -606,4 +606,33 @@ export class UsersService {
     });
     return { message: 'Password changed successfully' };
   }
+
+  async getPosts(){
+    return this.prisma.post.findMany({
+      where:{
+        isPublished: true,
+       },
+       select:{
+        postId: true,
+        title: true,
+        createdAt: true,
+        url: true,
+        type: true,
+        description: true,
+        specialist:{
+          select:{
+            user:{
+              select:{
+                fullName: true,
+                imageUrl: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy:{
+        createdAt: 'desc',
+      }
+    })
+  }
 }

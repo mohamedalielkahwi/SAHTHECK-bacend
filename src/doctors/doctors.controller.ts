@@ -9,6 +9,8 @@ import { DoctorsService } from './doctors.service';
 import { getAllPatientsResponse } from './response/getAllPatient';
 import { GetFormeResponse } from './response/getForme';
 import { createPosteDto } from './DTO/createPosteDto';
+import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
+import { GetAllSlotsResponse } from './response/getAllSlots';
 
 @Controller('doctors')
 @UseGuards(AuthGuard)
@@ -67,5 +69,30 @@ export class DoctorsController {
   ) {
     if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
     return this.doctorsService.createPost(req.user.userId, createPosteDto, file);
+  }
+
+  @Post('/daily-slots')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The daily slots have been successfully created.',
+  })
+  async createADailySlots(@Request() req, @Body() createDailySlotsDto: CreateDailySlotsDto) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.createADailySlots(req.user.userId, createDailySlotsDto);
+  }
+
+  @Get('/daily-slots')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The available slots have been successfully retrieved.',
+    type: [GetAllSlotsResponse],
+  })
+  async getDailySlots(@Request() req) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.getDailySlots(req.user.userId);
   }
 }

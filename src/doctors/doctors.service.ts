@@ -1,11 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { createPosteDto } from './DTO/createPosteDto';
 import { MinioService } from 'src/minio/minio.service';
+import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 
 @Injectable()
 export class DoctorsService {
-  constructor(private readonly prisma: PrismaService, private readonly minioService: MinioService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly minioService: MinioService,
+  ) {}
   async getPatients(doctorId: string) {
     const patients = await this.prisma.user.findMany({
       where: {
@@ -77,12 +81,18 @@ export class DoctorsService {
         OR: [
           {
             // Case 1: The date is strictly in the future (tomorrow or later)
-            date: { gt: now },
+            AvailableSlot:{
+              date: { gt: now },
+              isBooked: true,
+            }
           },
           {
             // Case 2: The date is today, so we check if the time is still to come
-            date: now,
-            time: { gt: now },
+            AvailableSlot:{
+              date:  now,
+              startTime: { gt: now },
+              isBooked: true,
+            }
           },
         ],
       },
@@ -113,7 +123,7 @@ export class DoctorsService {
     return { posts, count };
   }
 
-    async createPost(
+  async createPost(
     doctorId: string,
     dto: createPosteDto,
     file?: Express.Multer.File,
@@ -149,5 +159,51 @@ export class DoctorsService {
     });
 
     return post;
+  }
+
+  async createADailySlots(
+    userId: string,
+    createDailySlotsDto: CreateDailySlotsDto,
+  ) {
+    let { date, startTime, endTime } = createDailySlotsDto;
+    const user = await this.prisma.user.findFirst({
+      where: { userId },
+    });
+    if (!user) throw new ConflictException('User not found');
+    const slots: {
+      specialistId: string;
+      startTime: Date;
+      endTime: Date;
+      date: Date;
+    }[] = [];
+    startTime++;
+    endTime++;
+    const slotDuration = 1;
+    for (let hour = startTime; hour < endTime; hour++) {
+      const slotStart = new Date(date);
+      slotStart.setHours(hour, 0, 0, 0);
+      const slotEnd = new Date(date);
+      slotEnd.setHours(hour + slotDuration, 0, 0, 0);
+      slots.push({
+        specialistId: userId,
+        startTime: slotStart,
+        endTime: slotEnd,
+        date: date,
+      });
+    }
+    return this.prisma.availabeSlot.createMany({
+      data: slots,
+    });
+  }
+
+  async getDailySlots(userId: string) {
+    const now = new Date();
+    const slots = await this.prisma.availabeSlot.findMany({
+      where: {
+        specialistId: userId,
+        date: { gte: now },
+      },
+    });
+    return slots;
   }
 }

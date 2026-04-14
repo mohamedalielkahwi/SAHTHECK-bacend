@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Patch,
   Post,
@@ -223,4 +224,16 @@ export class UsersController {
   async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
     return this.usersService.changePassword(req.user.userId, changePasswordDto);
   }
+
+  @Get('/posts')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Posts retrieved successfully.',
+  })
+  async getPosts() {
+    return this.usersService.getPosts();
+  }
+
 }

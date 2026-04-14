@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -105,7 +105,6 @@ export class AdminsService {
             appointments: {
               select: {
                 reason: true,
-                date: true,
                 specialist: {
                   select: {
                     user: {
@@ -127,5 +126,64 @@ export class AdminsService {
       },
     });
     return { data: patients, count };
+  }
+
+  async getAllPosts() {
+    return this.prisma.post.findMany({
+      select: {
+        postId: true,
+        title: true,
+        createdAt: true,
+        url: true,
+        type: true,
+        isPublished: true,
+        description: true,
+        specialist: {
+          select: {
+            user: {
+              select: {
+                fullName: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async acceptPost(postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: {
+        postId,
+        isPublished: false,
+      },
+    });
+    if (!post)
+      throw new ConflictException('Post not found or already published');
+    await this.prisma.post.update({
+      where: {
+        postId,
+      },
+      data: {
+        isPublished: true,
+      },
+    });
+    return { message: 'Post accepted and published successfully' };
+  }
+
+  async deletePost(postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: {
+        postId,
+      },
+    });
+    if (!post) throw new ConflictException('Post not found');
+    await this.prisma.post.delete({
+      where: {
+        postId,
+      },
+    });
+    return { message: 'Post deleted successfully' };
   }
 }
