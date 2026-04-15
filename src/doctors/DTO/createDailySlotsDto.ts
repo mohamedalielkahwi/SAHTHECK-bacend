@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsDate, IsNotEmpty, IsNumber } from "class-validator";
+import { IsDate, IsNotEmpty, IsNumber, IsString } from "class-validator";
 import { Type } from "class-transformer"; // 1. Import Type
 
 export class CreateDailySlotsDto {
@@ -22,4 +22,9 @@ export class CreateDailySlotsDto {
     @IsNumber()
     @ApiProperty({ description: 'End hour (0-23)', example: 17 })
     endTime: number;
+
+    @IsNotEmpty()
+    @ApiProperty({ description: 'Place of the appointment', example: 'Clinic A' })
+    @IsString()
+    place: string;
 }

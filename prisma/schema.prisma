@@ -35,11 +35,13 @@ enum Type {
 
 enum Status {
   SCHEDULED
+  ACEPTED
+  REJECTED
   COMPLETED
   CANCELLED
 }
 
-enum Category{
+enum Category {
   IRM
   scanner
   radioStandard
@@ -49,12 +51,13 @@ enum Category{
   resultatsDAnalyse
 }
 
-enum Title{
+enum Title {
   radiography
   prescription
   physieotherapy
   bilanBiologique
 }
+
 enum PostType {
   ARTICLE
   VIDEO
@@ -89,17 +92,17 @@ model User {
   patient         Patient?
   specialist      Specialist?
   admin           Admin?
-  messages       Message[]
+  messages        Message[]
 }
 
 model Conversation {
-  conversationId String    @id @default(uuid())
+  conversationId String       @id @default(uuid())
   patientId      String
   specialistId   String
-  appointmentId  String?   @unique
-  createdAt      DateTime  @default(now())
-  patient        Patient   @relation(fields: [patientId], references: [userId], onDelete: Cascade)
-  specialist     Specialist @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  appointmentId  String?      @unique
+  createdAt      DateTime     @default(now())
+  patient        Patient      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
   appointment    Appointment? @relation(fields: [appointmentId], references: [appointmentId], onDelete: SetNull)
   messages       Message[]
 }
@@ -116,46 +119,48 @@ model Message {
 }
 
 model Patient {
-  userId         String            @id
-  age            Int?
-  weight         Float?
-  height         Float?
-  user           User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  medicalHistory MedicalDocument[]
-  appointments   Appointment[]
-  conversations  Conversation[]
+  userId            String            @id
+  age               Int?
+  weight            Float?
+  height            Float?
+  exerciseTolerance String?
+  exercises         Exercise[]
+  user              User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  medicalHistory    MedicalDocument[]
+  appointments      Appointment[]
+  conversations     Conversation[]
 }
 
 model MedicalDocument {
-  id         String   @id @default(uuid())
-  userId     String
-  title      Title
-  date       DateTime
-  type       Type
-  category   Category
+  id          String   @id @default(uuid())
+  userId      String
+  title       Title
+  date        DateTime
+  type        Type
+  category    Category
   description String?
-  fileUrl    String
-  uploadedAt DateTime @default(now())
-  patient    Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  fileUrl     String
+  uploadedAt  DateTime @default(now())
+  patient     Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
 
 model Specialist {
-  userId        String        @id
-  speciality    String?
-  bio           String?
-  licenseNumber String
-  isValidated   Boolean       @default(false)
-  clinic        String?
-  location      String?
-  rating        Float         @default(0)
-  reviewsCount  Int           @default(0)
-  latitude      Float?
-  longitude     Float?
-  user          User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  clinics       Clinic[]
-  appointments  Appointment[]
-  posts      Post[]
-  exercises     Exercise[]
+  userId         String         @id
+  speciality     String?
+  bio            String?
+  licenseNumber  String
+  isValidated    Boolean        @default(false)
+  clinic         String?
+  location       String?
+  rating         Float          @default(0)
+  reviewsCount   Int            @default(0)
+  latitude       Float?
+  longitude      Float?
+  user           User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  clinics        Clinic[]
+  appointments   Appointment[]
+  posts          Post[]
+  exercises      Exercise[]
   conversations  Conversation[]
   availableSlots AvailabeSlot[]
 }
@@ -177,51 +182,54 @@ model Clinic {
 }
 
 model AvailabeSlot {
-  availabilityId String        @id @default(uuid())
+  availabilityId String       @id @default(uuid())
   specialistId   String
   startTime      DateTime
   endTime        DateTime
   date           DateTime
-  isBooked       Boolean       @default(false)
-  specialist     Specialist    @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  place          String
+  isBooked       Boolean      @default(false)
+  specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
   appointments   Appointment?
 }
 
 model Appointment {
-  appointmentId  String       @id @default(uuid())
+  appointmentId  String        @id @default(uuid())
   patientId      String?
   specialistId   String
   clinicId       String?
-  availabilityId String       @unique
-  place          String?
+  availabilityId String        @unique
   reason         String
-  status         Status       @default(SCHEDULED)
-  createdAt      DateTime     @default(now())
-  patient        Patient?     @relation(fields: [patientId], references: [userId], onDelete: Cascade)
-  specialist     Specialist   @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
-  clinic         Clinic?      @relation(fields: [clinicId], references: [clinicId], onDelete: Cascade)
-  AvailableSlot  AvailabeSlot @relation(fields: [availabilityId], references: [availabilityId], onDelete: Cascade)
+  status         Status        @default(SCHEDULED)
+  createdAt      DateTime      @default(now())
+  patient        Patient?      @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  specialist     Specialist    @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+  clinic         Clinic?       @relation(fields: [clinicId], references: [clinicId], onDelete: Cascade)
+  AvailableSlot  AvailabeSlot  @relation(fields: [availabilityId], references: [availabilityId], onDelete: Cascade)
   conversation   Conversation?
 }
 
 model Post {
-  postId     String      @id @default(uuid())
+  postId        String     @id @default(uuid())
   title         String
   description   String
   type          PostType
   url           String?
   publishedById String
-  isPublished   Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  specialist    Specialist  @relation(fields: [publishedById], references: [userId], onDelete: Cascade)
+  isPublished   Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  specialist    Specialist @relation(fields: [publishedById], references: [userId], onDelete: Cascade)
 }
 
 model Exercise {
-  exerciseId  String     @id @default(uuid())
-  name        String
-  description String
-  videoUrl    String?
-  createdById String
-  createdAt   DateTime   @default(now())
-  specialist  Specialist @relation(fields: [createdById], references: [userId], onDelete: Cascade)
+  exerciseId   String     @id @default(uuid())
+  name         String
+  description  String
+  videoUrl     String?
+  createdById  String
+  isPublic     Boolean    @default(false)
+  assignedToId String?
+  createdAt    DateTime   @default(now())
+  patient      Patient?   @relation(fields: [assignedToId], references: [userId])
+  specialist   Specialist @relation(fields: [createdById], references: [userId], onDelete: Cascade)
 }

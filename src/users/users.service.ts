@@ -523,7 +523,7 @@ export class UsersService {
           email,
           fullName,
           role: 'PATIENT',
-          imageUrl, // 👈 save MinIO URL
+          imageUrl, 
         },
       });
 
@@ -586,12 +586,14 @@ export class UsersService {
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     const { currentPassword, newPassword } = changePasswordDto;
     const user = await this.prisma.user.findUnique({
-      where: { userId: userId},
+      where: { userId: userId },
     });
     if (!user) throw new ConflictException('User not found');
 
     if (!user.password) {
-      throw new ConflictException('you can not change password for Google accounts, please use Google sign in instead.');
+      throw new ConflictException(
+        'you can not change password for Google accounts, please use Google sign in instead.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -607,31 +609,130 @@ export class UsersService {
     return { message: 'Password changed successfully' };
   }
 
-  async getPosts(){
+  async getPosts() {
     return this.prisma.post.findMany({
-      where:{
+      where: {
         isPublished: true,
-       },
-       select:{
+      },
+      select: {
         postId: true,
         title: true,
         createdAt: true,
         url: true,
         type: true,
         description: true,
+        specialist: {
+          select: {
+            user: {
+              select: {
+                fullName: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async getSpecialists(q: string) {
+    if (q.trim() === '') {
+      return await this.prisma.specialist.findMany({
+        select: {
+          userId: true,
+          speciality: true,
+          latitude: true,
+          longitude: true,
+          user: {
+            select: {
+              fullName: true,
+              imageUrl: true,
+            },
+          },
+        },
+      });
+    } else {
+      return await this.prisma.specialist.findMany({
+        where: {
+          user: {
+            fullName: {
+              contains: q,
+              mode: 'insensitive',
+            },
+          },
+        },
+        select: {
+          userId: true,
+          speciality: true,
+          latitude: true,
+          longitude: true,
+          user: {
+            select: {
+              fullName: true,
+              imageUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          rating: 'asc',
+        },
+      });
+    }
+  }
+
+  async getSpecialist(id: string) {
+    const specialist = await this.prisma.specialist.findUnique({
+      where: {
+        userId: id,
+      },
+      select: {
+        userId: true,
+        speciality: true,
+        latitude: true,
+        longitude: true,
+        bio: true,
+        clinic: true,
+        location: true,
+        rating: true,
+        reviewsCount: true,
+        user: {
+          select: {
+            fullName: true,
+            imageUrl: true,
+            gender: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+    if (!specialist) throw new ConflictException('Specialist not found');
+    return specialist;
+  }
+
+  async getPublicExercises() {
+    return this.prisma.exercise.findMany({
+      where:{
+        isPublic:true,
+      },
+      select:{
+        exerciseId:true,
+        name:true,
+        description:true,
+        videoUrl:true,
         specialist:{
           select:{
             user:{
               select:{
-                fullName: true,
-                imageUrl: true,
+                fullName:true,
+                imageUrl:true,
               }
             }
           }
         }
-      },
-      orderBy:{
-        createdAt: 'desc',
       }
     })
   }

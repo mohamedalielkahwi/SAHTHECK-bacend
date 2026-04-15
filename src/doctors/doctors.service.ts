@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { createPosteDto } from './DTO/createPosteDto';
 import { MinioService } from 'src/minio/minio.service';
 import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
+import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
 
 @Injectable()
 export class DoctorsService {
@@ -81,18 +82,18 @@ export class DoctorsService {
         OR: [
           {
             // Case 1: The date is strictly in the future (tomorrow or later)
-            AvailableSlot:{
+            AvailableSlot: {
               date: { gt: now },
               isBooked: true,
-            }
+            },
           },
           {
             // Case 2: The date is today, so we check if the time is still to come
-            AvailableSlot:{
-              date:  now,
+            AvailableSlot: {
+              date: now,
               startTime: { gt: now },
               isBooked: true,
-            }
+            },
           },
         ],
       },
@@ -165,7 +166,7 @@ export class DoctorsService {
     userId: string,
     createDailySlotsDto: CreateDailySlotsDto,
   ) {
-    let { date, startTime, endTime } = createDailySlotsDto;
+    let { date, startTime, endTime , place} = createDailySlotsDto;
     const user = await this.prisma.user.findFirst({
       where: { userId },
     });
@@ -175,20 +176,23 @@ export class DoctorsService {
       startTime: Date;
       endTime: Date;
       date: Date;
+      place: string;
     }[] = [];
-    startTime++;
-    endTime++;
     const slotDuration = 1;
+    // Ensure date is a proper Date object set to midnight
+    const dateObject = new Date(date);
+    dateObject.setHours(0, 0, 0, 0);
     for (let hour = startTime; hour < endTime; hour++) {
-      const slotStart = new Date(date);
+      const slotStart = new Date(dateObject);
       slotStart.setHours(hour, 0, 0, 0);
-      const slotEnd = new Date(date);
+      const slotEnd = new Date(dateObject);
       slotEnd.setHours(hour + slotDuration, 0, 0, 0);
       slots.push({
         specialistId: userId,
         startTime: slotStart,
         endTime: slotEnd,
-        date: date,
+        date: dateObject,
+        place: place,
       });
     }
     return this.prisma.availabeSlot.createMany({
@@ -202,8 +206,71 @@ export class DoctorsService {
       where: {
         specialistId: userId,
         date: { gte: now },
+        isBooked: false,
+      },
+      select: {
+        availabilityId: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        isBooked: true,
+        place: true,
       },
     });
     return slots;
+  }
+
+  async getAppointments(doctorId: string) {
+    const appointments = await this.prisma.appointment.findMany({
+      where: {
+        specialistId: doctorId,
+      },
+      select: {
+        appointmentId: true,
+        status: true,
+        reason: true,
+        AvailableSlot: {
+          select: {
+            date: true,
+            startTime: true,
+            endTime: true,
+            place: true,
+          },
+        },
+        patient: {
+          select: {
+            user: {
+              select: {
+                fullName: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return appointments;
+  }
+
+  async modifyAppointment(doctorId: string, body: ModifyApointmentDto) {
+    const { appointmentId, status } = body;
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        appointmentId,
+        specialistId: doctorId,
+      },
+    })
+    if (!appointment) throw new ConflictException('Appointment not found');
+    await this.prisma.appointment.update({
+      where: { appointmentId },
+      data: { status: status as any },
+    });
+    if (status === 'REJECTED' ) {
+      await this.prisma.availabeSlot.update({
+        where: { availabilityId: appointment.availabilityId },
+        data: { isBooked: false },
+      });
+    }
+    return { message: 'Appointment modified successfully' ,status};
   }
 }

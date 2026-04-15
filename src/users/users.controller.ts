@@ -236,4 +236,34 @@ export class UsersController {
     return this.usersService.getPosts();
   }
 
+  @Get('/specialists/:q')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Specialists retrieved successfully.',
+  })
+  async getSpecialists(@Request() req) {
+    return this.usersService.getSpecialists(req.params.q);
+  }
+
+  @Get('/specialist/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Specialist retrieved successfully.',
+  })
+  async getSpecialist(@Request() req) {
+    return this.usersService.getSpecialist(req.params.id);
+  }
+
+  @Get('/public-exercises')
+  @ApiResponse({
+    status: 200,
+    description: 'Public exercises retrieved successfully.',
+  })
+  async getPublicExercises() {
+    return this.usersService.getPublicExercises();
+  }
 }

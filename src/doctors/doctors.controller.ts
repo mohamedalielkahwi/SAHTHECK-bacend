@@ -1,5 +1,6 @@
 import {
   Body, Controller, ForbiddenException, Get,
+  Patch,
   Post, Request, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -11,6 +12,7 @@ import { GetFormeResponse } from './response/getForme';
 import { createPosteDto } from './DTO/createPosteDto';
 import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 import { GetAllSlotsResponse } from './response/getAllSlots';
+import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
 
 @Controller('doctors')
 @UseGuards(AuthGuard)
@@ -94,5 +96,29 @@ export class DoctorsController {
   async getDailySlots(@Request() req) {
     if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
     return this.doctorsService.getDailySlots(req.user.userId);
+  }
+
+  @Get('appointments')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The appointments have been successfully retrieved.',
+  })
+  async getAppointments(@Request() req) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.getAppointments(req.user.userId);
+  }
+
+  @Patch('appointments/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The appointment has been successfully updated.',
+  })
+  async updateAppointmentStatus(@Request() req , @Body() body: ModifyApointmentDto) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.modifyAppointment(req.user.userId, body);
   }
 }
