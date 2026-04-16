@@ -32,6 +32,7 @@ import { GoogleSignupResponse } from './response/GoogleSignupResponse';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { WhoAmiIResponse } from './response/WhoAmiIResponse';
 import { ChangePasswordDto } from './DTO/ChangePasswordDto';
+import { CreateAppointmentDto } from './DTO/CreateApointmentDto';
 
 @Controller('users')
 export class UsersController {
@@ -265,5 +266,38 @@ export class UsersController {
   })
   async getPublicExercises() {
     return this.usersService.getPublicExercises();
+  }
+
+  @Post('/apointment')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The appointment has been successfully created.',
+  })
+  async createApointment(@Request() req, @Body() createApointmentDto: CreateAppointmentDto) {
+      return this.usersService.createApointment(req.user.userId, createApointmentDto);
+  }
+
+  @Get('/appointments')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Appointments retrieved successfully.',
+  })
+  async getAppointments(@Request() req) {
+    return this.usersService.getAppointments(req.user.userId);
+  }
+
+  @Get('/available-slots/:specialistId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Available slots retrieved successfully.',
+  })
+  async getAvailableSlots(@Request() req) {
+    return this.usersService.getAvailableSlots(req.params.specialistId);
   }
 }

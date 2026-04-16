@@ -12,6 +12,7 @@ import { MinioService } from 'src/minio/minio.service';
 import { OAuth2Client } from 'google-auth-library';
 import { Readable } from 'node:stream';
 import { ChangePasswordDto } from './DTO/ChangePasswordDto';
+import { CreateAppointmentDto } from './DTO/CreateApointmentDto';
 
 interface GoogleProfile {
   email: string;
@@ -735,5 +736,90 @@ export class UsersService {
         }
       }
     })
+  }
+
+  async createApointment(userId: string, createApointmentDto: CreateAppointmentDto) {
+    const { specialistId, availabilityId, reason } = createApointmentDto;
+    const availability = await this.prisma.availabeSlot.findUnique({
+      where: {
+        availabilityId,
+        specialistId,
+        isBooked: false,
+      },
+    });
+    if (!availability) throw new ConflictException('Availability or Specialist not found');
+    await this.prisma.appointment.create({
+      data: {
+        patientId: userId,
+        specialistId: specialistId,
+        availabilityId: availabilityId,
+        reason: reason,
+      },
+    });
+    await this.prisma.availabeSlot.update({
+      where: {
+        availabilityId,
+        specialistId,
+      },
+      data: {
+        isBooked: true,
+      },
+    });
+    return { message: 'Appointment created successfully' };
+  }
+
+  async getAppointments(userId: string) {
+    const appointments = await this.prisma.appointment.findMany({
+      where:{
+        patientId: userId,
+      },
+      select:{
+        appointmentId: true,
+        status: true,
+        reason: true,
+        AvailableSlot: {
+          select: {
+            date: true,
+            startTime: true,
+            endTime: true,
+            place: true,
+          },
+        },
+        specialist: {
+          select: {
+            user: {
+              select: {
+                fullName: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      }
+    })
+    return appointments;
+  }
+
+  async getAvailableSlots(specialistId: string) {
+    const slots = await this.prisma.availabeSlot.findMany({
+      where: {
+        specialistId,
+        isBooked: false,
+        date:{
+          gte: new Date()
+        }
+      },
+      select: {
+        availabilityId: true,
+        date: true,
+        startTime: true,
+        endTime: true,
+        place: true,
+      }
+    });
+    if (slots.length === 0) {
+      throw new ConflictException('No available slots found for this specialist');
+    }
+    return slots;
   }
 }

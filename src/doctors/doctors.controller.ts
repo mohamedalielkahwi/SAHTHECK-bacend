@@ -1,5 +1,5 @@
 import {
-  Body, Controller, ForbiddenException, Get,
+  Body, Controller, Delete, ForbiddenException, Get,
   Patch,
   Post, Request, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
@@ -13,6 +13,7 @@ import { createPosteDto } from './DTO/createPosteDto';
 import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 import { GetAllSlotsResponse } from './response/getAllSlots';
 import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
+import { UpdateDailySlotsDto } from './DTO/updateDailySlotsDto';
 
 @Controller('doctors')
 @UseGuards(AuthGuard)
@@ -96,6 +97,30 @@ export class DoctorsController {
   async getDailySlots(@Request() req) {
     if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
     return this.doctorsService.getDailySlots(req.user.userId);
+  }
+
+  @Patch('daily-slots/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The daily slot has been successfully updated.',
+  })
+  async updateDailySlots(@Request() req, @Body() body: UpdateDailySlotsDto) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.updateDailySlots(req.user.userId, body, req.params.id);
+  }
+
+  @Delete('daily-slots/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The daily slot has been successfully deleted.',
+  })
+  async deleteDailySlots(@Request() req) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.deleteDailySlots(req.user.userId, req.params.id);
   }
 
   @Get('appointments')

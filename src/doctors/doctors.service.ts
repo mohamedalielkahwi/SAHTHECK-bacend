@@ -4,6 +4,7 @@ import { createPosteDto } from './DTO/createPosteDto';
 import { MinioService } from 'src/minio/minio.service';
 import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
+import { UpdateDailySlotsDto } from './DTO/updateDailySlotsDto';
 
 @Injectable()
 export class DoctorsService {
@@ -166,11 +167,42 @@ export class DoctorsService {
     userId: string,
     createDailySlotsDto: CreateDailySlotsDto,
   ) {
-    let { date, startTime, endTime , place} = createDailySlotsDto;
+    let { date, startTime, endTime, place } = createDailySlotsDto;
     const user = await this.prisma.user.findFirst({
       where: { userId },
     });
     if (!user) throw new ConflictException('User not found');
+
+    // Ensure date is a proper Date object set to midnight
+    const dateObject = new Date(date);
+    dateObject.setHours(0, 0, 0, 0);
+
+    // Convert startTime and endTime to Date objects for the query
+    const startTimeDate = new Date(dateObject);
+    startTimeDate.setHours(startTime, 0, 0, 0);
+    const endTimeDate = new Date(dateObject);
+    endTimeDate.setHours(endTime, 0, 0, 0);
+
+    const existingSlots = await this.prisma.availabeSlot.findMany({
+      where: {
+        specialistId: userId,
+        date: dateObject,
+        // Any overlap with the requested range
+        startTime: {
+          lt: endTimeDate,
+        },
+        endTime: {
+          gt: startTimeDate,
+        },
+      },
+      select: {
+        startTime: true,
+      },
+    });
+
+    const existingStartTimes = new Set(
+      existingSlots.map((slot) => slot.startTime.getTime()),
+    );
     const slots: {
       specialistId: string;
       startTime: Date;
@@ -179,14 +211,16 @@ export class DoctorsService {
       place: string;
     }[] = [];
     const slotDuration = 1;
-    // Ensure date is a proper Date object set to midnight
-    const dateObject = new Date(date);
-    dateObject.setHours(0, 0, 0, 0);
     for (let hour = startTime; hour < endTime; hour++) {
       const slotStart = new Date(dateObject);
       slotStart.setHours(hour, 0, 0, 0);
       const slotEnd = new Date(dateObject);
       slotEnd.setHours(hour + slotDuration, 0, 0, 0);
+
+      if (existingStartTimes.has(slotStart.getTime())) {
+        continue;
+      }
+
       slots.push({
         specialistId: userId,
         startTime: slotStart,
@@ -195,6 +229,11 @@ export class DoctorsService {
         place: place,
       });
     }
+
+    if (slots.length === 0) {
+      return { count: 0 };
+    }
+
     return this.prisma.availabeSlot.createMany({
       data: slots,
     });
@@ -218,6 +257,56 @@ export class DoctorsService {
       },
     });
     return slots;
+  }
+
+  async updateDailySlots(userId: string, body: UpdateDailySlotsDto, id: string) {
+    const { date, startTime, endTime, place , isBooked} = body;
+    const dateObject = new Date(date);
+    dateObject.setHours(0, 0, 0, 0);
+    const startTimeDate = new Date(dateObject);
+    startTimeDate.setHours(startTime, 0, 0, 0);
+    const endTimeDate = new Date(dateObject);
+    endTimeDate.setHours(endTime, 0, 0, 0);
+    const slot = await this.prisma.availabeSlot.findFirst({
+      where:{
+        specialistId: userId,
+        date: dateObject,
+        startTime: startTimeDate,
+        endTime: endTimeDate,
+        isBooked: isBooked,
+      }
+    })
+    console.log(slot)
+    if (slot) throw new ConflictException('Slot already exists with the same date and time');
+    return this.prisma.availabeSlot.update({
+      where: {
+        availabilityId: id,
+        specialistId: userId,
+      },
+      data: {
+        date: dateObject,
+        startTime: startTimeDate,
+        endTime: endTimeDate,
+        place,
+        isBooked,
+      },
+    });
+  }
+
+  async deleteDailySlots(userId: string, id: string) {
+
+    const slot = await this.prisma.availabeSlot.findFirst({
+      where: {
+        availabilityId: id,
+        specialistId: userId,      },
+    });
+    if (!slot) throw new ConflictException('Slot or user not found');
+    return this.prisma.availabeSlot.delete({
+      where: {
+        availabilityId: id,
+        specialistId: userId,
+      },
+    });
   }
 
   async getAppointments(doctorId: string) {
@@ -259,18 +348,18 @@ export class DoctorsService {
         appointmentId,
         specialistId: doctorId,
       },
-    })
+    });
     if (!appointment) throw new ConflictException('Appointment not found');
     await this.prisma.appointment.update({
       where: { appointmentId },
       data: { status: status as any },
     });
-    if (status === 'REJECTED' ) {
+    if (status === 'REJECTED') {
       await this.prisma.availabeSlot.update({
         where: { availabilityId: appointment.availabilityId },
         data: { isBooked: false },
       });
     }
-    return { message: 'Appointment modified successfully' ,status};
+    return { message: 'Appointment modified successfully', status };
   }
 }
