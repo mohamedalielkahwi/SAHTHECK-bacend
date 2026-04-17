@@ -20,19 +20,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  // map userId -> socketId for notifications
-  private connectedUsers = new Map<string, string>();
-
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
+  private userRoom(userId: string) {
+    return `user:${userId}`;
+  }
+
   // ─── Connection ───────────────────────────────────────────────
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth.token ||
+      const token =
+        client.handshake.auth.token ||
         client.handshake.headers.authorization?.split(' ')[1];
 
       if (!token) {
@@ -48,8 +50,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.userId = payload.userId;
       client.data.role = payload.role;
 
-      // track connected user
-      this.connectedUsers.set(payload.userId, client.id);
+      // user room supports multiple devices/sockets per user
+      client.join(this.userRoom(payload.userId));
 
       console.log(`User ${payload.userId} connected`);
     } catch {
@@ -59,9 +61,51 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     if (client.data.userId) {
-      this.connectedUsers.delete(client.data.userId);
       console.log(`User ${client.data.userId} disconnected`);
     }
+  }
+
+  async emitMessageCreated(
+    senderId: string,
+    conversationId: string,
+    message: {
+      senderName: string | null;
+      content: string;
+      conversationId: string;
+      [key: string]: unknown;
+    },
+  ) {
+    this.server.to(conversationId).emit('new_message', message);
+
+    const otherUserId = await this.chatService.getOtherUserId(
+      senderId,
+      conversationId,
+    );
+
+    if (!otherUserId) return;
+
+    // Update conversation list and unread badge in realtime.
+    this.server.to(this.userRoom(otherUserId)).emit('conversation_updated', {
+      conversationId,
+      reason: 'new_message',
+    });
+
+    this.server.to(this.userRoom(senderId)).emit('conversation_updated', {
+      conversationId,
+      reason: 'new_message',
+    });
+
+    const unreadCount = await this.chatService.getUnreadCount(otherUserId);
+    this.server.to(this.userRoom(otherUserId)).emit('unread_count_updated', {
+      count: unreadCount,
+    });
+
+    this.server.to(this.userRoom(otherUserId)).emit('notification', {
+      type: 'new_message',
+      conversationId,
+      senderName: message.senderName ?? 'Unknown',
+      preview: message.content.substring(0, 50),
+    });
   }
 
   // ─── Join conversation room ───────────────────────────────────
@@ -102,30 +146,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     if (!message) {
-      client.emit('error', { message: 'Access denied or conversation not found' });
+      client.emit('error', {
+        message: 'Access denied or conversation not found',
+      });
       return;
     }
 
-    // broadcast to everyone in the conversation room
-    this.server.to(data.conversationId).emit('new_message', message);
-
-    // notify the other user even if not in room (push notification style)
-    const otherUserId = await this.chatService.getOtherUserId(
-      senderId,
-      data.conversationId,
-    );
-
-    if (otherUserId) {
-      const otherSocketId = this.connectedUsers.get(otherUserId);
-      if (otherSocketId) {
-        this.server.to(otherSocketId).emit('notification', {
-          type: 'new_message',
-          conversationId: data.conversationId,
-          senderName: message.senderName,
-          preview: data.content.substring(0, 50),
-        });
-      }
-    }
+    await this.emitMessageCreated(senderId, data.conversationId, message);
   }
 
   // ─── Mark messages as read ────────────────────────────────────
@@ -134,15 +161,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { conversationId: string },
   ) {
-    await this.chatService.markMessagesAsRead(
-      client.data.userId,
-      data.conversationId,
-    );
+    const readerId = client.data.userId;
+
+    await this.chatService.markMessagesAsRead(readerId, data.conversationId);
+
+    const readerUnreadCount = await this.chatService.getUnreadCount(readerId);
+    this.server.to(this.userRoom(readerId)).emit('unread_count_updated', {
+      count: readerUnreadCount,
+    });
 
     // notify the other user their messages were read
     this.server.to(data.conversationId).emit('messages_read', {
       conversationId: data.conversationId,
-      readBy: client.data.userId,
+      readBy: readerId,
     });
   }
 }

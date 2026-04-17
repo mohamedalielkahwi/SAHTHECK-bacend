@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -6,7 +10,11 @@ export class ChatService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ─── Create conversation when appointment is accepted ─────────
-  async createConversation(patientId: string, specialistId: string, appointmentId: string) {
+  async createConversation(
+    patientId: string,
+    specialistId: string,
+    appointmentId: string,
+  ) {
     // check if conversation already exists for this appointment
     const existing = await this.prisma.conversation.findUnique({
       where: { appointmentId },
@@ -20,11 +28,10 @@ export class ChatService {
 
   // ─── Get all conversations for a user ─────────────────────────
   async getConversations(userId: string, role: string) {
-    const where = role === 'PATIENT'
-      ? { patientId: userId }
-      : { specialistId: userId };
+    const where =
+      role === 'PATIENT' ? { patientId: userId } : { specialistId: userId };
 
-    return this.prisma.conversation.findMany({
+    const conversations = await this.prisma.conversation.findMany({
       where,
       include: {
         patient: {
@@ -40,12 +47,20 @@ export class ChatService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return conversations.sort((a, b) => {
+      const aDate = a.messages[0]?.createdAt ?? a.createdAt;
+      const bDate = b.messages[0]?.createdAt ?? b.createdAt;
+      return bDate.getTime() - aDate.getTime();
+    });
   }
 
   // ─── Get messages for a conversation ──────────────────────────
   async getMessages(userId: string, conversationId: string) {
     const hasAccess = await this.verifyAccess(userId, conversationId);
-    if (!hasAccess) return null;
+    if (!hasAccess) {
+      throw new ForbiddenException('Access denied to this conversation');
+    }
 
     return this.prisma.message.findMany({
       where: { conversationId },
@@ -57,12 +72,22 @@ export class ChatService {
   }
 
   // ─── Create a message ─────────────────────────────────────────
-  async createMessage(senderId: string, conversationId: string, content: string) {
+  async createMessage(
+    senderId: string,
+    conversationId: string,
+    content: string,
+  ) {
+    if (!content?.trim()) {
+      throw new BadRequestException('Message content is required');
+    }
+
     const hasAccess = await this.verifyAccess(senderId, conversationId);
-    if (!hasAccess) return null;
+    if (!hasAccess) {
+      throw new ForbiddenException('Access denied to this conversation');
+    }
 
     const message = await this.prisma.message.create({
-      data: { senderId, conversationId, content },
+      data: { senderId, conversationId, content: content.trim() },
       include: {
         sender: { select: { fullName: true, imageUrl: true } },
       },
@@ -104,7 +129,10 @@ export class ChatService {
   }
 
   // ─── Get the other user in a conversation ─────────────────────
-  async getOtherUserId(userId: string, conversationId: string): Promise<string | null> {
+  async getOtherUserId(
+    userId: string,
+    conversationId: string,
+  ): Promise<string | null> {
     const conversation = await this.prisma.conversation.findUnique({
       where: { conversationId },
     });

@@ -13,6 +13,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { Readable } from 'node:stream';
 import { ChangePasswordDto } from './DTO/ChangePasswordDto';
 import { CreateAppointmentDto } from './DTO/CreateApointmentDto';
+import { ChatService } from 'src/chat/chat.service';
 
 interface GoogleProfile {
   email: string;
@@ -26,6 +27,7 @@ export class UsersService {
     private readonly minioService: MinioService,
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly chatService: ChatService,
     @Inject(refreshJwtConfig.KEY)
     private readonly refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
   ) {}
@@ -524,7 +526,7 @@ export class UsersService {
           email,
           fullName,
           role: 'PATIENT',
-          imageUrl, 
+          imageUrl,
         },
       });
 
@@ -716,29 +718,32 @@ export class UsersService {
 
   async getPublicExercises() {
     return this.prisma.exercise.findMany({
-      where:{
-        isPublic:true,
+      where: {
+        isPublic: true,
       },
-      select:{
-        exerciseId:true,
-        name:true,
-        description:true,
-        videoUrl:true,
-        specialist:{
-          select:{
-            user:{
-              select:{
-                fullName:true,
-                imageUrl:true,
-              }
-            }
-          }
-        }
-      }
-    })
+      select: {
+        exerciseId: true,
+        name: true,
+        description: true,
+        videoUrl: true,
+        specialist: {
+          select: {
+            user: {
+              select: {
+                fullName: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
-  async createApointment(userId: string, createApointmentDto: CreateAppointmentDto) {
+  async createApointment(
+    userId: string,
+    createApointmentDto: CreateAppointmentDto,
+  ) {
     const { specialistId, availabilityId, reason } = createApointmentDto;
     const availability = await this.prisma.availabeSlot.findUnique({
       where: {
@@ -747,8 +752,9 @@ export class UsersService {
         isBooked: false,
       },
     });
-    if (!availability) throw new ConflictException('Availability or Specialist not found');
-    await this.prisma.appointment.create({
+    if (!availability)
+      throw new ConflictException('Availability or Specialist not found');
+    const appointment = await this.prisma.appointment.create({
       data: {
         patientId: userId,
         specialistId: specialistId,
@@ -765,15 +771,20 @@ export class UsersService {
         isBooked: true,
       },
     });
+    await this.chatService.createConversation(
+      userId,
+      specialistId,
+      appointment.appointmentId,
+    );
     return { message: 'Appointment created successfully' };
   }
 
   async getAppointments(userId: string) {
     const appointments = await this.prisma.appointment.findMany({
-      where:{
+      where: {
         patientId: userId,
       },
-      select:{
+      select: {
         appointmentId: true,
         status: true,
         reason: true,
@@ -795,8 +806,8 @@ export class UsersService {
             },
           },
         },
-      }
-    })
+      },
+    });
     return appointments;
   }
 
@@ -805,9 +816,9 @@ export class UsersService {
       where: {
         specialistId,
         isBooked: false,
-        date:{
-          gte: new Date()
-        }
+        date: {
+          gte: new Date(),
+        },
       },
       select: {
         availabilityId: true,
@@ -815,10 +826,12 @@ export class UsersService {
         startTime: true,
         endTime: true,
         place: true,
-      }
+      },
     });
     if (slots.length === 0) {
-      throw new ConflictException('No available slots found for this specialist');
+      throw new ConflictException(
+        'No available slots found for this specialist',
+      );
     }
     return slots;
   }

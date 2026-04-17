@@ -8,6 +8,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { OtpModule } from 'src/otp/otp.module';
 import { MinioModule } from 'src/minio/minio.module';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { MinioModule } from 'src/minio/minio.module';
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(refreshJwtConfig),
     OtpModule,
-    MinioModule
+    MinioModule,
+    ChatModule,
   ],
   controllers: [UsersController],
   providers: [UsersService,GoogleStrategy],
