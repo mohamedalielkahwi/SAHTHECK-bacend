@@ -2,22 +2,25 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# install dependencies
-COPY package*.json ./
-RUN npm install
+# Install pnpm
+RUN npm install -g pnpm
 
-# copy all source files
+# Install dependencies
+COPY pnpm-lock.yaml package.json ./
+RUN pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
+
+# Copy all source files
 COPY . .
 
-# generate prisma client
-RUN npx prisma generate
+# Generate prisma client
+RUN pnpm exec prisma generate
 
-# build the app
-RUN npm run build
+# Build the app
+RUN pnpm run build
 
-# verify dist exists
+# Verify dist exists
 RUN ls -la /app/dist/
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec prisma generate && node dist/src/main"]

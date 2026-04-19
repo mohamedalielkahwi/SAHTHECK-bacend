@@ -18,6 +18,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - backend-network
 
   # ─── MinIO ───────────────────────────────────────────────────
   minio:
@@ -38,6 +40,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - backend-network
 
   # ─── NestJS Backend ──────────────────────────────────────────
   backend:
@@ -49,8 +53,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:password@sahteck-postgres:5432/SAHTECK
-      MINIO_ENDPOINT: sahteck-minio
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/SAHTECK
+      MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
     ports:
       - '3000:3000'
@@ -59,7 +63,27 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - backend-network
+
+  # ─── React Frontend ──────────────────────────────────────────
+  frontend:
+    build:
+      context: ../websahtech
+      dockerfile: Dockerfile
+    container_name: sahteck-frontend
+    restart: always
+    ports:
+      - '3001:80'
+    depends_on:
+      - backend
+    networks:
+      - backend-network
 
 volumes:
   postgres_data:
   minio_data:
+
+networks:
+  backend-network:
+    driver: bridge

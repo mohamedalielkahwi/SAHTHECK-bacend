@@ -156,6 +156,7 @@ model Specialist {
   reviewsCount   Int            @default(0)
   latitude       Float?
   longitude      Float?
+  expertise       String[]
   user           User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
   clinics        Clinic[]
   appointments   Appointment[]
