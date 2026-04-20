@@ -28,6 +28,11 @@ enum OtpType {
   TWO_FACTOR
 }
 
+enum Security {
+  MFA
+  SFA
+}
+
 enum Type {
   pdf
   image
@@ -85,6 +90,7 @@ model User {
   isEmailVerified Boolean     @default(false)
   gender          Gender?
   role            Role
+  security        Security?   @default(SFA)
   address         String?
   isGoogleAccount Boolean     @default(false)
   createdAt       DateTime    @default(now())
@@ -93,6 +99,7 @@ model User {
   specialist      Specialist?
   admin           Admin?
   messages        Message[]
+  favoritePosts   Post[]      @relation("UserFavoritePosts")
 }
 
 model Conversation {
@@ -156,7 +163,7 @@ model Specialist {
   reviewsCount   Int            @default(0)
   latitude       Float?
   longitude      Float?
-  expertise       String[]
+  expertise      String[]
   user           User           @relation(fields: [userId], references: [userId], onDelete: Cascade)
   clinics        Clinic[]
   appointments   Appointment[]
@@ -220,6 +227,7 @@ model Post {
   isPublished   Boolean    @default(false)
   createdAt     DateTime   @default(now())
   specialist    Specialist @relation(fields: [publishedById], references: [userId], onDelete: Cascade)
+  favoritedBy   User[]     @relation("UserFavoritePosts")
 }
 
 model Exercise {

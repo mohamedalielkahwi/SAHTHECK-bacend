@@ -2,8 +2,8 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
+  Param,
   Patch,
   Post,
   Request,
@@ -50,6 +50,17 @@ export class UsersController {
   })
   async signIn(@Body() signInDto: SignInDto) {
     return this.usersService.signIn(signInDto);
+  }
+
+  @Patch('/update-otp')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'security method updated.',
+  })
+  async updateOtp(@Request() req) {
+    return this.usersService.updateOtp(req.user.userId);
   }
 
   @UseGuards(AuthGuard)
@@ -193,7 +204,9 @@ export class UsersController {
 
   @Get('/auth/google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {}
+  googleAuth() {
+    return;
+  }
 
   @Get('/auth/google/callback')
   @UseGuards(GoogleAuthGuard)
@@ -222,7 +235,10 @@ export class UsersController {
     status: 200,
     description: 'The password has been successfully changed.',
   })
-  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+  async changePassword(
+    @Request() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
     return this.usersService.changePassword(req.user.userId, changePasswordDto);
   }
 
@@ -235,6 +251,39 @@ export class UsersController {
   })
   async getPosts() {
     return this.usersService.getPosts();
+  }
+
+  @Post('/favorite-posts/:postId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 201,
+    description: 'Post added to favorites successfully.',
+  })
+  async addFavoritePost(@Request() req, @Param('postId') postId: string) {
+    return this.usersService.addFavoritePost(req.user.userId, postId);
+  }
+
+  @Delete('/favorite-posts/:postId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Post removed from favorites successfully.',
+  })
+  async removeFavoritePost(@Request() req, @Param('postId') postId: string) {
+    return this.usersService.removeFavoritePost(req.user.userId, postId);
+  }
+
+  @Get('/favorite-posts')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'Favorite posts retrieved successfully.',
+  })
+  async getFavoritePosts(@Request() req) {
+    return this.usersService.getFavoritePosts(req.user.userId);
   }
 
   @Get('/specialists/:q')
@@ -275,8 +324,14 @@ export class UsersController {
     status: 200,
     description: 'The appointment has been successfully created.',
   })
-  async createApointment(@Request() req, @Body() createApointmentDto: CreateAppointmentDto) {
-      return this.usersService.createApointment(req.user.userId, createApointmentDto);
+  async createApointment(
+    @Request() req,
+    @Body() createApointmentDto: CreateAppointmentDto,
+  ) {
+    return this.usersService.createApointment(
+      req.user.userId,
+      createApointmentDto,
+    );
   }
 
   @Get('/appointments')

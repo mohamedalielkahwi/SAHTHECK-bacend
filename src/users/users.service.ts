@@ -14,6 +14,7 @@ import { Readable } from 'node:stream';
 import { ChangePasswordDto } from './DTO/ChangePasswordDto';
 import { CreateAppointmentDto } from './DTO/CreateApointmentDto';
 import { ChatService } from 'src/chat/chat.service';
+import { use } from 'passport';
 
 interface GoogleProfile {
   email: string;
@@ -165,9 +166,7 @@ export class UsersService {
 
     return { imageUrl };
   }
-  async signIn(
-    signInDto,
-  ): Promise<{ require2FA: boolean; userId: string; email: string }> {
+  async signIn(signInDto): Promise<SignInResponse> {
     const { email, password } = signInDto;
     const user = await this.prisma.user.findUnique({
       where: {
@@ -183,12 +182,47 @@ export class UsersService {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new ConflictException('Invalid credentials');
     console.log('User authenticated, sending OTP for 2FA');
-    this.otpService
-      .sendOtp(user.userId, user.email, 'TWO_FACTOR')
-      .catch((err) => {
-        console.error('Failed to send OTP:', err);
-      });
-    return { require2FA: true, userId: user.userId, email: user.email };
+    if (user.security === 'MFA') {
+      this.otpService
+        .sendOtp(user.userId, user.email, 'TWO_FACTOR')
+        .catch((err) => {
+          console.error('Failed to send OTP:', err);
+        });
+      return { require2FA: true, userId: user.userId, email: user.email };
+    } else {
+      const payload = {
+        email: user.email,
+        userId: user.userId,
+        role: user.role,
+      };
+      const [accessToken, refreshToken] = await Promise.all([
+        this.jwtService.signAsync(payload),
+        this.jwtService.signAsync(payload, this.refreshTokenConfig),
+      ]);
+      return {
+        require2FA: false,
+        accessToken,
+        refreshToken,
+        userId: user.userId,
+        email: user.email,
+        role: user.role,
+        imageUrl: user.imageUrl ? user.imageUrl : undefined,
+      };
+    }
+  }
+
+  async updateOtp(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { userId } });
+    if (!user) throw new ConflictException('User not found');
+    const upadatedSecurity = await this.prisma.user.update({
+      where: { userId },
+      data: {
+        security: user.security === 'MFA' ? 'SFA' : 'MFA',
+      },
+    });
+    return {
+      message: `Security method updated to ${upadatedSecurity.security}`,
+    };
   }
 
   async verifySignIn(userId: string, code: string): Promise<SignInResponse> {
@@ -639,6 +673,113 @@ export class UsersService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async addFavoritePost(userId: string, postId: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { postId },
+      select: { postId: true },
+    });
+
+    if (!post) {
+      throw new ConflictException('Post not found');
+    }
+
+    const alreadyFavorited = await this.prisma.user.findFirst({
+      where: {
+        userId,
+        favoritePosts: {
+          some: {
+            postId,
+          },
+        },
+      },
+      select: { userId: true },
+    });
+
+    if (alreadyFavorited) {
+      throw new ConflictException('Post already in favorites');
+    }
+
+    await this.prisma.user.update({
+      where: { userId },
+      data: {
+        favoritePosts: {
+          connect: { postId },
+        },
+      },
+    });
+
+    return { message: 'Post added to favorites successfully' };
+  }
+
+  async removeFavoritePost(userId: string, postId: string) {
+    const favoritedPost = await this.prisma.user.findFirst({
+      where: {
+        userId,
+        favoritePosts: {
+          some: {
+            postId,
+          },
+        },
+      },
+      select: { userId: true },
+    });
+
+    if (!favoritedPost) {
+      throw new ConflictException('Post is not in favorites');
+    }
+
+    await this.prisma.user.update({
+      where: { userId },
+      data: {
+        favoritePosts: {
+          disconnect: { postId },
+        },
+      },
+    });
+
+    return { message: 'Post removed from favorites successfully' };
+  }
+
+  async getFavoritePosts(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { userId },
+      select: {
+        favoritePosts: {
+          where: {
+            isPublished: true,
+          },
+          select: {
+            postId: true,
+            title: true,
+            createdAt: true,
+            url: true,
+            type: true,
+            description: true,
+            specialist: {
+              select: {
+                user: {
+                  select: {
+                    fullName: true,
+                    imageUrl: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new ConflictException('User not found');
+    }
+
+    return user.favoritePosts;
   }
 
   async getSpecialists(q: string) {

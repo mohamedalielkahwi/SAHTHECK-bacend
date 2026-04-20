@@ -6,14 +6,14 @@ export class SignInResponse {
     example:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
   })
-  accessToken: string;
+  accessToken?: string;
 
   @ApiProperty({
     description: 'The refresh token for the authenticated user',
     example:
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
   })
-  refreshToken: string;
+  refreshToken?: string;
 
   @ApiProperty({
     description: 'The user ID of the authenticated user',
@@ -31,11 +31,17 @@ export class SignInResponse {
     description: 'The role of the authenticated user',
     example: 'Patient',
   })
-  role: string;
+  role?: string;
 
   @ApiProperty({
     example: 'http://localhost:9000/sahteck/profile-images/123.jpg',
     nullable: true,
   })
   imageUrl?: string;
+
+  @ApiProperty({
+    description: 'Indicates if the user needs to complete 2FA',
+    example: false,
+  })
+  require2FA?: boolean;
 }
