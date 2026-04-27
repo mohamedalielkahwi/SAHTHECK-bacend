@@ -142,7 +142,6 @@ model MedicalDocument {
   id          String   @id @default(uuid())
   userId      String
   title       Title
-  date        DateTime
   type        Type
   category    Category
   description String?

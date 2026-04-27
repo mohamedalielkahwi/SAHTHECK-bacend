@@ -14,7 +14,6 @@ import { Readable } from 'node:stream';
 import { ChangePasswordDto } from './DTO/ChangePasswordDto';
 import { CreateAppointmentDto } from './DTO/CreateApointmentDto';
 import { ChatService } from 'src/chat/chat.service';
-import { use } from 'passport';
 
 interface GoogleProfile {
   email: string;

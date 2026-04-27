@@ -1,5 +1,6 @@
 import {
   Body, Controller, Delete, ForbiddenException, Get,
+  Param,
   Patch,
   Post, Request, UploadedFile, UseGuards, UseInterceptors,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 import { GetAllSlotsResponse } from './response/getAllSlots';
 import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
 import { UpdateDailySlotsDto } from './DTO/updateDailySlotsDto';
+import { CreateMedicalDocumentDto } from './DTO/createMedicalDocumendDto';
 
 @Controller('doctors')
 @UseGuards(AuthGuard)
@@ -145,5 +147,38 @@ export class DoctorsController {
   async updateAppointmentStatus(@Request() req , @Body() body: ModifyApointmentDto) {
     if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
     return this.doctorsService.modifyAppointment(req.user.userId, body);
+  }
+
+  @Post('/documents_medical/:patientId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The medical document has been successfully added.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  async addDocument(@Request() req, @Param('patientId') patientId: string, @UploadedFile() file: Express.Multer.File,@Body() body: CreateMedicalDocumentDto) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.addDocument(req.user.userId, patientId, file, body);
+  }
+
+  @Get('/documents_medical/:patientId')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: 200,
+    description: 'The medical documents have been successfully retrieved.',
+  })
+  async getDocuments(@Request() req, @Param('patientId') patientId: string) {
+    if (req.user.role !== 'DOCTOR') throw new ForbiddenException('Access denied');
+    return this.doctorsService.getDocuments(req.user.userId, patientId);
   }
 }

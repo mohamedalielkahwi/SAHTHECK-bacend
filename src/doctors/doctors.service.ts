@@ -5,6 +5,7 @@ import { MinioService } from 'src/minio/minio.service';
 import { CreateDailySlotsDto } from './DTO/createDailySlotsDto';
 import { ModifyApointmentDto } from './DTO/ModifyApointmentDto';
 import { UpdateDailySlotsDto } from './DTO/updateDailySlotsDto';
+import { CreateMedicalDocumentDto } from './DTO/createMedicalDocumendDto';
 
 @Injectable()
 export class DoctorsService {
@@ -361,5 +362,36 @@ export class DoctorsService {
       });
     }
     return { message: 'Appointment modified successfully', status };
+  }
+
+  async addDocument(doctorId: string, patientId: string, file: Express.Multer.File, body: CreateMedicalDocumentDto) {
+    const patient = await this.prisma.user.findFirst({
+      where: {
+        userId: patientId,
+      },
+    });
+    if (!patient) throw new ConflictException('Patient not found');
+    const folder = `medical-documents/${patientId}`;
+    const fileUrl = await this.minioService.uploadFile(file, folder);
+    return this.prisma.medicalDocument.create({
+      data: {
+        userId: patientId,
+        fileUrl: fileUrl,
+        ...body,
+      },
+    });
+  }
+
+  async getDocuments(doctorId: string, patientId: string) {
+    const patient = await this.prisma.user.findFirst({
+      where: {
+        userId: patientId,      },
+    });
+    if (!patient) throw new ConflictException('Patient not found');
+    return this.prisma.medicalDocument.findMany({
+      where: {
+        userId: patientId,
+      },
+    });
   }
 }
