@@ -57,10 +57,11 @@ enum Category {
 }
 
 enum Title {
-  radiography
-  prescription
-  physieotherapy
-  bilanBiologique
+  examenClinique
+  examenComplementaire
+  conduitAtenir
+  physiotherapie
+  Diagnostic
 }
 
 enum PostType {
@@ -133,21 +134,305 @@ model Patient {
   exerciseTolerance String?
   exercises         Exercise[]
   user              User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  medicalHistory    MedicalDocument[]
+  sessions          PatientSession[]
   appointments      Appointment[]
   conversations     Conversation[]
 }
 
-model MedicalDocument {
-  id          String   @id @default(uuid())
-  userId      String
-  title       Title
-  type        Type
-  category    Category
+// ─── Session principale par visite ───────────────────────────
+model PatientSession {
+  sessionId    String   @id @default(uuid())
+  patientId    String
+  specialistId String
+  sessionDate  DateTime @default(now())
+  notes        String?  // notes générales de la session
+  createdAt    DateTime @default(now())
+
+  patient    Patient    @relation(fields: [patientId], references: [userId], onDelete: Cascade)
+  specialist Specialist @relation(fields: [specialistId], references: [userId], onDelete: Cascade)
+
+  examenClinique        ExamenClinique?
+  examenComplementaire  ExamenComplementaire[]
+  diagnostic            Diagnostic?
+  conduiteATenir        ConduiteATenir?
+  physiotherapie        Physiotherapie?
+}
+
+// ─── 1. Examen Clinique ───────────────────────────────────────
+model ExamenClinique {
+  id        String @id @default(uuid())
+  sessionId String @unique
+
+  // Interrogatoire
+  age               Int?
+  sexe              String?
+  profession        String?
+  membreDominant    String?
+  activiteSportive  String?
+  couvertureSociale String?
+
+  // Antécédents
+  antecedents       String? // JSON or text
+
+  // Douleur
+  siegeDouleur      String?
+  irradiation       String?
+  intensiteEVA      Float?   // 0-10
+  typeRythme        String?  // mécanique/inflammatoire/mixte
+  facteurAggravant  String?
+  facteurSoulagement String?
+  debutDouleur      String?  // progressif/brutal
+
+  // Retentissement
+  retentissementAVQ     Boolean @default(false)
+  retentissementPro     Boolean @default(false)
+  retentissementSommeil Boolean @default(false)
+
+  // Examen physique
+  inspection     String? // observations libres
+  mobiliteActive String? // JSON: { antepulsion: 120, abduction: 90, ... }
+  mobilitePassive String?
+  testConflits   String? // JSON: { neer: true, hawkins: false, yocum: true }
+  testsTendineux String? // JSON: { jobe: false, patte: true, gerber: false }
+  palpation      String?
+  examenCervical String?
+  examenNeurologique String?
+
+  // Bilan fonctionnel simple
+  mainBouche Boolean @default(false)
+  mainTete   Boolean @default(false)
+  mainNuque  Boolean @default(false)
+  mainDos    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  session   PatientSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+}
+
+// ─── 2. Examen Complémentaire ─────────────────────────────────
+model ExamenComplementaire {
+  id        String @id @default(uuid())
+  sessionId String
+
+  type        ExamenComplementaireType
   description String?
-  fileUrl     String
-  uploadedAt  DateTime @default(now())
-  patient     Patient  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  resultat    String? // observations du médecin
+  fileUrl     String? // stored in MinIO
+  date        DateTime?
+
+  createdAt DateTime @default(now())
+  session   PatientSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+}
+
+enum ExamenComplementaireType {
+  radiographie
+  echographie
+  IRM
+  arthroscanner
+  bilanBiologique
+  autre
+}
+
+// ─── 3. Diagnostic ────────────────────────────────────────────
+model Diagnostic {
+  id        String @id @default(uuid())
+  sessionId String @unique
+
+  // Type d'épaule
+  typeEpaule TypeEpaule?
+
+  // Diagnostics spécifiques
+  diagnostic        String  // description principale
+  diagnosticDiff    String? // diagnostics différentiels
+  severite          String? // légère/modérée/sévère
+  observations      String? // notes libres
+
+  createdAt DateTime @default(now())
+  session   PatientSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+}
+
+enum TypeEpaule {
+  douloureuse_simple
+  hyperalgique
+  pseudo_paralytique
+  bloquee
+}
+
+// ─── 4. Conduite À Tenir ─────────────────────────────────────
+model ConduiteATenir {
+  id        String @id @default(uuid())
+  sessionId String @unique
+
+  // Traitement médicamenteux
+  antalgiques       String? // ex: "Paracétamol 1g x3/j"
+  antiInflammatoires String?
+  myorelaxants      String?
+  corticoides       String?
+  autresMedicaments String?
+
+  // Traitement local
+  infiltration      Boolean @default(false)
+  infiltrationDetail String?
+  ondesDeChoc       Boolean @default(false)
+  arthroDistension  Boolean @default(false)
+
+  // Chirurgie
+  chirurgie         Boolean @default(false)
+  typeChirurgie     String?
+
+  // Repos / recommandations
+  reposRelatif      Boolean @default(false)
+  recommandations   String?
+
+  // Suivi
+  prochainRDV       DateTime?
+  objectifs         String?
+
+  createdAt DateTime @default(now())
+  session   PatientSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+}
+
+// ─── 5. Physiothérapie ────────────────────────────────────────
+model Physiotherapie {
+  id        String @id @default(uuid())
+  sessionId String @unique
+
+  createdAt DateTime @default(now())
+  session   PatientSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  bilanKinesitherapique BilanKinesitherapique?
+  protocoleReeducation  ProtocoleReeducation?
+  resultat              ResultatPhysiotherapie?
+}
+
+// ─── 5a. Bilan Kinésithérapique (ex: épaule) ─────────────────
+model BilanKinesitherapique {
+  id               String @id @default(uuid())
+  physiotherapieId String @unique
+
+  // Interrogatoire (même structure qu'examen clinique)
+  // mais spécifique kiné
+  plainte          String?
+  historique       String?
+  intensiteEVA     Float?
+
+  // Scores standardisés (stockés en JSON pour flexibilité)
+  constantScore    Json?  // { douleur, activites, mobilite, force, total }
+  quickDashScore   Json?  // { items: [...], score: 45.5 }
+  dashArabeScore   Json?
+
+  // Bilan articulaire actif (en degrés)
+  antepulsionActive    Float?
+  abductionActive      Float?
+  retractionActive     Float?
+  rotationExterneActive Float?
+  rotationInterneActive Float?
+
+  // Bilan articulaire passif
+  antepulsionPassive    Float?
+  abductionPassive      Float?
+  retractionPassive     Float?
+  rotationExternePassive Float?
+  rotationInternePassive Float?
+
+  // Testing musculaire (0-5)
+  deltoideTesting     Int?
+  susEpineuxTesting   Int?
+  infraEpineuxTesting Int?
+  subScapulaireTesting Int?
+
+  // Tests spécifiques kinés
+  testJobe     Boolean?
+  testPatte    Boolean?
+  testGerber   Boolean?
+  testNeer     Boolean?
+  testHawkins  Boolean?
+
+  // Bilan fonctionnel
+  mainBouche Boolean?
+  mainTete   Boolean?
+  mainNuque  Boolean?
+  mainDos    Boolean?
+
+  observations String?
+
+  createdAt        DateTime @default(now())
+  physiotherapie   Physiotherapie @relation(fields: [physiotherapieId], references: [id], onDelete: Cascade)
+}
+
+// ─── 5b. Protocole de Rééducation ────────────────────────────
+model ProtocoleReeducation {
+  id               String @id @default(uuid())
+  physiotherapieId String @unique
+
+  // Objectifs
+  objectifsCourt   String? // objectifs à court terme
+  objectifsLong    String? // objectifs à long terme
+
+  // Moyens
+  physiotherapieAntalgique Boolean @default(false) // infrarouge, ultrasons...
+  typesPhysio      String? // "infrarouge, TENS, cryothérapie"
+  massage          Boolean @default(false)
+  massageDetail    String?
+  balnéotherapie   Boolean @default(false)
+
+  // Programme kiné
+  mobilisationsPassives    Boolean @default(false)
+  mobilisationsActives     Boolean @default(false)
+  renforcement             Boolean @default(false)
+  proprioception           Boolean @default(false)
+  exercicesDetail          String? // description du programme
+
+  // Exercices assignés (lien vers Exercise model)
+  exerciceIds      String[] // IDs des exercices du catalogue
+
+  // Fréquence
+  seancesParSemaine Int?
+  dureeSemaines     Int?
+
+  // Orthèse
+  orthese          Boolean @default(false)
+  typeOrthese      String?
+
+  observations     String?
+
+  createdAt        DateTime @default(now())
+  physiotherapie   Physiotherapie @relation(fields: [physiotherapieId], references: [id], onDelete: Cascade)
+}
+
+// ─── 5c. Résultats ────────────────────────────────────────────
+model ResultatPhysiotherapie {
+  id               String @id @default(uuid())
+  physiotherapieId String @unique
+
+  // Scores de résultat
+  constantScoreFinal  Json?
+  quickDashScoreFinal Json?
+  evaFinal            Float?
+
+  // Evolution
+  evolutionDouleur    Evolution?
+  evolutionMobilite   Evolution?
+  evolutionForce      Evolution?
+  evolutionFonction   Evolution?
+
+  // Amplitudes finales
+  antepulsionFinal    Float?
+  abductionFinal      Float?
+  rotationExterneFinal Float?
+  rotationInterneFinal Float?
+
+  objectifsAtteints   Boolean @default(false)
+  conclusionKine      String?
+  suitesDonnees       String? // "arrêt de rééducation / poursuite / orientation"
+
+  createdAt        DateTime @default(now())
+  physiotherapie   Physiotherapie @relation(fields: [physiotherapieId], references: [id], onDelete: Cascade)
+}
+
+enum Evolution {
+  amelioration
+  stable
+  aggravation
 }
 
 model Specialist {
@@ -170,6 +455,8 @@ model Specialist {
   exercises      Exercise[]
   conversations  Conversation[]
   availableSlots AvailabeSlot[]
+  sessions PatientSession[]
+
 }
 
 model Admin {

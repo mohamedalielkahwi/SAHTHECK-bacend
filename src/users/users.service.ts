@@ -58,10 +58,20 @@ export class UsersService {
       },
     });
     if (user) throw new ConflictException('User already exists');
-    if (role === 'DOCTOR' && (!speciality || !bio || !licenseNumber)) {
-      throw new ConflictException(
-        'Speciality, bio and license number are required for doctors',
-      );
+    if (role === 'DOCTOR') {
+      if (!speciality || !bio || !licenseNumber) {
+        throw new ConflictException(
+          'Speciality, bio and license number are required for doctors',
+        );
+      }
+      const existeLicense = await this.prisma.specialist.findFirst({
+        where: {
+          licenseNumber,
+        },
+      });
+      if (existeLicense) {
+        throw new ConflictException('License number already exists');
+      }
     }
     if (role === 'PATIENT' && !age) {
       throw new ConflictException('Age is required for patients');
@@ -90,9 +100,9 @@ export class UsersService {
           role === 'DOCTOR'
             ? {
                 create: {
-                  speciality,
-                  bio,
-                  licenseNumber,
+                  speciality: speciality!,
+                  bio: bio!,
+                  licenseNumber: licenseNumber!,
                   clinic,
                   location,
                   latitude,
@@ -147,7 +157,7 @@ export class UsersService {
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10);
   }
-  async uploadImage(userId: string, file: Express.Multer.File) {
+  async uploadImage(userId: string, file: any) {
     const user = await this.prisma.user.findUnique({ where: { userId } });
     if (!user) throw new ConflictException('User not found');
     if (user.imageUrl) {
@@ -534,7 +544,7 @@ export class UsersService {
           const buffer = Buffer.from(arrayBuffer);
 
           // create a fake Multer file object
-          const file: Express.Multer.File = {
+          const file: any = {
             buffer,
             originalname: `${Date.now()}-google-avatar.jpg`,
             mimetype: 'image/jpeg',
@@ -911,11 +921,6 @@ export class UsersService {
         isBooked: true,
       },
     });
-    await this.chatService.createConversation(
-      userId,
-      specialistId,
-      appointment.appointmentId,
-    );
     return { message: 'Appointment created successfully' };
   }
 

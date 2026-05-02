@@ -90,7 +90,7 @@ export class UsersController {
       },
     },
   })
-  async uploadImage(@Request() req, @UploadedFile() file: Express.Multer.File) {
+  async uploadImage(@Request() req, @UploadedFile() file: any) {
     return this.usersService.uploadImage(req.user.userId, file);
   }
 

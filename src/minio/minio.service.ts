@@ -59,16 +59,54 @@ export class MinioService implements OnModuleInit {
     return `http://${process.env.MINIO_PUBLIC_URL}:${process.env.MINIO_PORT}/${this.bucket}/${fileName}`;
   }
 
+  // Upload a private file and return the object name (key) only — do not expose a public URL
+  async uploadPrivateFile(
+    file: Express.Multer.File,
+    folder: string,
+  ): Promise<string> {
+    const objectName = `${folder}/${Date.now()}-${file.originalname}`;
+
+    await this.client.putObject(
+      this.bucket,
+      objectName,
+      file.buffer,
+      file.size,
+      {
+        'Content-Type': file.mimetype,
+      },
+    );
+
+    return objectName;
+  }
+
   async deleteFile(fileUrl: string): Promise<void> {
     const fileName = fileUrl.split(`/${this.bucket}/`)[1];
     await this.client.removeObject(this.bucket, fileName);
   }
 
+  // Remove object by its object name (key)
+  async removeObjectByName(objectName: string): Promise<void> {
+    await this.client.removeObject(this.bucket, objectName);
+  }
+
+  // Get presigned URL by passing the full public file URL (keeps backward compatibility)
   async getPresignedUrl(
     fileUrl: string,
     expirySeconds = 3600,
   ): Promise<string> {
     const fileName = fileUrl.split(`/${this.bucket}/`)[1];
     return this.client.presignedGetObject(this.bucket, fileName, expirySeconds);
+  }
+
+  // Get presigned URL directly from object name (preferred for private files)
+  async getPresignedUrlByObjectName(
+    objectName: string,
+    expirySeconds = 3600,
+  ): Promise<string> {
+    return this.client.presignedGetObject(
+      this.bucket,
+      objectName,
+      expirySeconds,
+    );
   }
 }

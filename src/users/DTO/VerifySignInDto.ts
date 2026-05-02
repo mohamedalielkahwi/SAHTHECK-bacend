@@ -7,12 +7,12 @@ export class VerifySignInDto {
         example: '123e4567-e89b-12d3-a456-426614174000',
     })
     @IsString()
-    userId: string;
+    userId!: string;
 
     @ApiProperty({
         description: 'The verification code',
         example: '123456',
     })
     @IsString()
-    code: string;
+    code!: string;
 }

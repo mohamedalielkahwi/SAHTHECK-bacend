@@ -17,7 +17,7 @@ export class ChatService {
   ) {
     // check if conversation already exists for this appointment
     const existing = await this.prisma.conversation.findUnique({
-      where: { appointmentId },
+      where: { appointmentId, patientId, specialistId },
     });
     if (existing) return existing;
 

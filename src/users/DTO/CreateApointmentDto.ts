@@ -8,7 +8,7 @@ export class CreateAppointmentDto {
     description: 'ID of the specialist',
     example: 'specialist-123',
   })
-  specialistId: string;
+  specialistId!: string;
 
   @IsString()
   @IsNotEmpty()
@@ -16,7 +16,7 @@ export class CreateAppointmentDto {
     description: 'ID of the availability',
     example: 'availability-123',
   })
-  availabilityId: string;
+  availabilityId!: string;
 
   @IsString()
   @IsNotEmpty()
@@ -24,5 +24,5 @@ export class CreateAppointmentDto {
     description: 'Reason for the appointment',
     example: 'Regular check-up',
   })
-  reason: string;
+  reason!: string;
 }

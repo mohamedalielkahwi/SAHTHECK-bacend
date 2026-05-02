@@ -20,7 +20,6 @@ async function main() {
   await prisma.availabeSlot.deleteMany();
   await prisma.post.deleteMany();
   await prisma.exercise.deleteMany();
-  await prisma.medicalDocument.deleteMany();
   await prisma.otp.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.specialist.deleteMany();

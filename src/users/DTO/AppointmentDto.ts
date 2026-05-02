@@ -5,18 +5,22 @@ export class AppointmentDto {
   @IsString()
   @IsNotEmpty()
   @ApiProperty({ description: 'ID of the specialist for the appointment' })
-  specialistId: string;
+  specialistId!: string;
 
   @IsDate()
   @IsNotEmpty()
   @ApiProperty({ description: 'Date of the appointment' })
-  date: Date;
+  date!: Date;
 
   @IsDate()
   @IsNotEmpty()
   @ApiProperty({ description: 'Time of the appointment' })
-  time: Date;
-  reason: string;
+  time!: Date;
+
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({ description: 'Reason for the appointment' })
+  reason!: string;
 
   @IsString()
   @ApiProperty({ description: 'ID of the clinic for the appointment' })

@@ -16,7 +16,7 @@ export class UpdateUserDto {
   })
   @IsNotEmpty()
   @IsString()
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({
     description: 'The new email of the user',
@@ -24,7 +24,7 @@ export class UpdateUserDto {
   })
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'The new phone number of the user',
@@ -33,7 +33,7 @@ export class UpdateUserDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[0-9 ]{8}$/, { message: 'phone number must be exactly 8 digits' })
-  phone: string;
+  phone!: string;
 
   @ApiProperty({
     description: 'The address of the user',
@@ -41,7 +41,7 @@ export class UpdateUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  address!: string;
 
   @ApiProperty({
     description: 'The new age of the Patient',
@@ -58,15 +58,15 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  weight: number;
+  weight?: number;
 
   @ApiProperty({
     description: 'Height of the patient in cm. Required for PATIENT role',
-    example: 175.0,
+    example: 175,
   })
   @IsOptional()
   @IsNumber()
-  height: number;
+  height?: number;
 
   @ApiProperty({
     description: 'The biography of the Doctor',
@@ -84,7 +84,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
-  clinic: string;
+  clinic?: string;
 
   @ApiProperty({
     description: 'Location of the doctor clinic',
@@ -92,7 +92,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
-  location: string;
+  location?: string;
 
   @ApiProperty({
     description: 'Latitude of the doctor clinic',
@@ -100,7 +100,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  latitude: number;
+  latitude?: number;
 
   @ApiProperty({
     description: 'Longitude of the doctor clinic',
@@ -108,5 +108,5 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  longitude: number;
+  longitude?: number;
 }

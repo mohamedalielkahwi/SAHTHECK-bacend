@@ -41,7 +41,7 @@ export class AdminsService {
       },
     });
     const postNumber = await this.prisma.post.count();
-    const medicalDocumentNumber = await this.prisma.medicalDocument.count();
+    const medicalDocumentNumber = await this.prisma.patientSession.count();
     return {
       specialist: { data: specialist, count: specialistCount },
       patient: { data: patient, count: patientCount },

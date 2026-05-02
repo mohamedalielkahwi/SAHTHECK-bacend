@@ -16,7 +16,7 @@ export class CreateUserDto {
   @ApiProperty({ description: 'The name of the user', example: 'John Doe' })
   @IsNotEmpty()
   @IsString()
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({
     description: 'The email of the user',
@@ -24,7 +24,7 @@ export class CreateUserDto {
   })
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'The password of the user',
@@ -33,7 +33,7 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   @MinLength(6)
-  password: string;
+  password!: string;
 
   @ApiProperty({
     description: 'The phone number of the user',
@@ -42,13 +42,13 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @Matches(/^[0-9 ]{8}$/, { message: 'phone number must be exactly 8 digits' })
-  phone: string;
+  phone!: string;
 
   @ApiProperty({ description: 'The gender of the user', example: 'MALE' })
   @IsNotEmpty()
   @IsString()
   @IsEnum(Gender, { message: 'gender must be either MALE, FEMALE or OTHER' })
-  gender: Gender;
+  gender!: Gender;
 
   @ApiProperty({
     description: 'The address of the user',
@@ -56,13 +56,13 @@ export class CreateUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  address: string;
+  address!: string;
 
   @ApiProperty({ description: 'The role of the user', example: 'PATIENT' })
   @IsString()
   @IsNotEmpty()
   @IsEnum(Role, { message: 'role must be either ADMIN, PATIENT or DOCTOR' })
-  role: Role;
+  role!: Role;
 
   // ─── PATIENT fields ───────────────────────────────────────────
 
@@ -72,7 +72,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsNumberString()
-  age: string;
+  age?: string;
 
   @ApiProperty({
     description: 'Weight of the patient in kg. Required for PATIENT role',
@@ -80,7 +80,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  weight: number;
+  weight?: number;
 
   @ApiProperty({
     description: 'Height of the patient in cm. Required for PATIENT role',
@@ -88,7 +88,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  height: number;
+  height?: number;
 
   // ─── DOCTOR fields ────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
-  speciality: string;
+  speciality?: string;
 
   @ApiProperty({
     description: 'Biography of the doctor. Required for DOCTOR role',
@@ -106,7 +106,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
-  bio: string;
+  bio?: string;
 
   @ApiProperty({
     description: 'License number of the doctor. Required for DOCTOR role',
@@ -117,7 +117,7 @@ export class CreateUserDto {
   @Matches(/^\d{4,5}\/\d{2}$/, {
     message: 'licenseNumber must be in format XXXX/YY or XXXXX/YY',
   })
-  licenseNumber: string;
+  licenseNumber?: string;
 
   @ApiProperty({
     description: 'Clinic name of the doctor',
@@ -125,7 +125,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
-  clinic: string;
+  clinic?: string;
 
   @ApiProperty({
     description: 'Location of the doctor clinic',
@@ -133,7 +133,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsString()
-  location: string;
+  location?: string;
 
   @ApiProperty({
     description: 'Latitude of the doctor clinic',
@@ -141,7 +141,7 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  latitude: number;
+  latitude?: number;
 
   @ApiProperty({
     description: 'Longitude of the doctor clinic',
@@ -149,5 +149,5 @@ export class CreateUserDto {
   })
   @IsOptional()
   @IsNumber()
-  longitude: number;
+  longitude?: number;
 }
